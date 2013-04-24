@@ -5,6 +5,8 @@ using System.Collections.Generic;
 public class MecanimEventEditorPopup : EditorWindow {
 	private static MecanimEventEditorPopup actived;
 	
+	private static MecanimEvent clipboard = null;
+	
 	private MecanimEvent eventTemp;
 	private ReorderableListWrapper conditionList;
 	private MecanimEvent eventEditing;
@@ -81,6 +83,19 @@ public class MecanimEventEditorPopup : EditorWindow {
 		GUILayout.FlexibleSpace();
 		
 		GUILayout.BeginHorizontal();
+		
+		if (GUILayout.Button("Copy", GUILayout.MinWidth(60))) {
+			clipboard = new MecanimEvent(eventTemp);
+		}
+		
+		if (GUILayout.Button("Paste", GUILayout.MinWidth(60))) {
+			if (clipboard == null) {
+				Debug.Log("Do not have any data in clipboard.");
+				return;
+			}
+				
+			eventTemp = new MecanimEvent(clipboard);
+		}
 		
 		GUILayout.FlexibleSpace();
 		
