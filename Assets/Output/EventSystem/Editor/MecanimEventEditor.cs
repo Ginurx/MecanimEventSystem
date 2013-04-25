@@ -28,7 +28,6 @@ public class MecanimEventEditor : EditorWindow {
 	
 	private List<MecanimEvent> displayEvents;
 	
-	[MenuItem ("Window/Mecanim Event Editor")]
 	static void Init () {
 		EditorWindow.GetWindow<MecanimEventEditor>();
 	}

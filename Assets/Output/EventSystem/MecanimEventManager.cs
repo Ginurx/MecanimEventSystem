@@ -2,18 +2,33 @@ using UnityEngine;
 using System.Collections.Generic;
 
 public static class MecanimEventManager {
-	private static MecanimEventData eventData;
-	private static Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>> loadedData;
+	private static MecanimEventData[] eventDataSources;
 	
+	private static Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>> loadedData;
 	
 	private static Dictionary<int, Dictionary<int, AnimatorStateInfo>> lastStates = new Dictionary<int, Dictionary<int, AnimatorStateInfo>>();
 	
 	
 	public static void SetEventDataSource(MecanimEventData dataSource) {
 		if (dataSource != null) {
-			MecanimEventManager.eventData = dataSource;
+			eventDataSources = new MecanimEventData[1];
+			eventDataSources[0] = dataSource;
+			
 			LoadDataInGame();
 		}
+	}
+	
+	public static void SetEventDataSource(MecanimEventData[] dataSources) {
+		if (dataSources != null) {
+			
+			eventDataSources = dataSources;
+			
+			LoadDataInGame();
+		}
+	}
+	
+	public static void OnLevelLoaded() {
+		lastStates.Clear();
 	}
 	
 	public static MecanimEvent[] GetEvents(int animatorControllerId, Animator animator) {
@@ -92,20 +107,32 @@ public static class MecanimEventManager {
 	}
 	
 	private static void LoadDataInGame() {
-		loadedData = new Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>>();
-		MecanimEventDataEntry[] entries = eventData.data;
 		
-		foreach(MecanimEventDataEntry entry in entries) {
-			int animatorControllerId = entry.animatorController.GetInstanceID();
+		if (eventDataSources == null)
+			return;
+		
+		loadedData = new Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>>();
+		
+		foreach (MecanimEventData dataSource in eventDataSources) {
+		
+			if (dataSource == null)
+				continue;
 			
-			if (!loadedData.ContainsKey(animatorControllerId))
-				loadedData[animatorControllerId] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+			MecanimEventDataEntry[] entries = dataSource.data;
 			
-			if (!loadedData[animatorControllerId].ContainsKey(entry.layer)) {
-				loadedData[animatorControllerId][entry.layer] = new Dictionary<int, List<MecanimEvent>>();
+			foreach(MecanimEventDataEntry entry in entries) {
+				int animatorControllerId = entry.animatorController.GetInstanceID();
+				
+				if (!loadedData.ContainsKey(animatorControllerId))
+					loadedData[animatorControllerId] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+				
+				if (!loadedData[animatorControllerId].ContainsKey(entry.layer)) {
+					loadedData[animatorControllerId][entry.layer] = new Dictionary<int, List<MecanimEvent>>();
+				}
+				
+				loadedData[animatorControllerId][entry.layer][entry.stateNameHash] = new List<MecanimEvent>(entry.events);
 			}
 			
-			loadedData[animatorControllerId][entry.layer][entry.stateNameHash] = new List<MecanimEvent>(entry.events);
 		}
 	}
 	

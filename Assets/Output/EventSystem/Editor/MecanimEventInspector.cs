@@ -277,83 +277,47 @@ public class MecanimEventInspector : Editor {
 	}
 	
 	private void LoadData() {
+		
+		MecanimEventData dataSource = target as MecanimEventData;
+		
 		data = new Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>>();
 		
-		serializedObject.Update();
+		if (dataSource.data == null || dataSource.data.Length == 0)
+			return;
 		
-		SerializedProperty entries = serializedObject.FindProperty("data");
-		
-		for (int i = 0; i < entries.arraySize; i++) {
-			SerializedProperty entry = entries.GetArrayElementAtIndex(i);
+		foreach(MecanimEventDataEntry entry in dataSource.data) {
 			
-			SerializedProperty controllerProperty		= entry.FindPropertyRelative("animatorController");
-			SerializedProperty layerProperty			= entry.FindPropertyRelative("layer");
-			SerializedProperty stateNameHashProperty 	= entry.FindPropertyRelative("stateNameHash");
-			SerializedProperty eventsProperty 			= entry.FindPropertyRelative("events");
+			int animatorControllerId = entry.animatorController.GetInstanceID();
 			
+			if (!data.ContainsKey(animatorControllerId))
+				data[animatorControllerId] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
 			
-			UnityEngine.Object controller = controllerProperty.objectReferenceValue;
-			int layer		 = layerProperty.intValue;
-			int stateNameHash = stateNameHashProperty.intValue;
-			
-			if (controller == null)
-				continue;
-			
-			int controllerId = controller.GetInstanceID();
-			
-			if (!ValidateState(controllerId, layer, stateNameHash))
-				continue;
-			
-			List<MecanimEvent> eventList = new List<MecanimEvent>();
-			
-			for (int j = 0; j < eventsProperty.arraySize; j++) {
-				SerializedProperty e = eventsProperty.GetArrayElementAtIndex(j);
-				
-				MecanimEvent newEvent = new MecanimEvent();
-				
-				newEvent.normalizedTime = e.FindPropertyRelative("normalizedTime").floatValue;
-				newEvent.functionName = e.FindPropertyRelative("functionName").stringValue;
-				newEvent.paramType = (MecanimEventParamTypes)e.FindPropertyRelative("paramType").enumValueIndex;
-				newEvent.intParam = e.FindPropertyRelative("intParam").intValue;
-				newEvent.floatParam = e.FindPropertyRelative("floatParam").floatValue;
-				newEvent.stringParam = e.FindPropertyRelative("stringParam").stringValue;
-				newEvent.boolParam = e.FindPropertyRelative("boolParam").boolValue;
-				
-				SerializedProperty conditionProperty = e.FindPropertyRelative("condition");
-				SerializedProperty conditionsProperty = conditionProperty.FindPropertyRelative("conditions");
-				
-				for (int k = 0; k < conditionsProperty.arraySize; k++) {
-					SerializedProperty conditionEntryProperty = conditionsProperty.GetArrayElementAtIndex(k);
-					
-					EventConditionEntry conditionEntry = new EventConditionEntry();
-					
-					conditionEntry.conditionParam = conditionEntryProperty.FindPropertyRelative("conditionParam").stringValue;
-					conditionEntry.conditionParamType = (EventConditionParamTypes)conditionEntryProperty.FindPropertyRelative("conditionParamType").enumValueIndex;
-					conditionEntry.conditionMode = (EventConditionModes)conditionEntryProperty.FindPropertyRelative("conditionMode").enumValueIndex;
-					conditionEntry.intValue = conditionEntryProperty.FindPropertyRelative("intValue").intValue;
-					conditionEntry.floatValue = conditionEntryProperty.FindPropertyRelative("floatValue").floatValue;
-					conditionEntry.boolValue = conditionEntryProperty.FindPropertyRelative("boolValue").boolValue;
-					
-					newEvent.condition.conditions.Add(conditionEntry);
-				}
-				
-				eventList.Add(newEvent);
+			if (!data[animatorControllerId].ContainsKey(entry.layer)) {
+				data[animatorControllerId][entry.layer] = new Dictionary<int, List<MecanimEvent>>();
 			}
 			
-			if (!data.ContainsKey(controllerId))
-				data[controllerId] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+			List<MecanimEvent> events = new List<MecanimEvent>();
 			
-			if (!data[controllerId].ContainsKey(layer))
-				data[controllerId][layer] = new Dictionary<int, List<MecanimEvent>>();
+			if (entry.events != null) {
+				foreach (MecanimEvent e in entry.events) {
+					
+					events.Add(new MecanimEvent(e));
+					
+				}
+			}
 			
-			data[controllerId][layer][stateNameHash] = eventList;
+			data[animatorControllerId][entry.layer][entry.stateNameHash] = events;
+			
 		}
 	}
 	
 	public void SaveData() {
-		SerializedProperty entries = serializedObject.FindProperty("data");
-		entries.ClearArray();
 		
+		MecanimEventData targetData = target as MecanimEventData;
+		Undo.RegisterUndo(target, "Mecanim Event Data");
+		
+		List<MecanimEventDataEntry> entries = new List<MecanimEventDataEntry>();
+
 		foreach(int controllerId in data.Keys) {
 			foreach(int layer in data[controllerId].Keys) {
 				foreach(int stateNameHash in data[controllerId][layer].Keys) {
@@ -366,49 +330,20 @@ public class MecanimEventInspector : Editor {
 						continue;
 					}
 					
-					entries.InsertArrayElementAtIndex(entries.arraySize);
-					SerializedProperty entry = entries.GetArrayElementAtIndex(entries.arraySize-1);
+					MecanimEventDataEntry entry = new MecanimEventDataEntry();
+					entry.animatorController = controller;
+					entry.layer = layer;
+					entry.stateNameHash = stateNameHash;
+					entry.events = data[controllerId][layer][stateNameHash].ToArray();;
 					
-					entry.FindPropertyRelative("animatorController").objectReferenceValue = controller;
-					entry.FindPropertyRelative("layer").intValue = layer;
-					entry.FindPropertyRelative("stateNameHash").intValue = stateNameHash;
-					
-					SerializedProperty events = entry.FindPropertyRelative("events");
-					events.ClearArray();
-						
-					foreach(MecanimEvent e in data[controllerId][layer][stateNameHash]) {
-						events.InsertArrayElementAtIndex(events.arraySize);
-						SerializedProperty eventProperty = events.GetArrayElementAtIndex(events.arraySize-1);
-						
-						eventProperty.FindPropertyRelative("normalizedTime").floatValue = e.normalizedTime;
-						eventProperty.FindPropertyRelative("functionName").stringValue = e.functionName;
-						eventProperty.FindPropertyRelative("paramType").enumValueIndex = (int)e.paramType;
-						eventProperty.FindPropertyRelative("intParam").intValue = e.intParam;
-						eventProperty.FindPropertyRelative("floatParam").floatValue = e.floatParam;
-						eventProperty.FindPropertyRelative("stringParam").stringValue = e.stringParam;
-						eventProperty.FindPropertyRelative("boolParam").boolValue = e.boolParam;
-						
-						SerializedProperty conditionProperty = eventProperty.FindPropertyRelative("condition");
-						SerializedProperty conditionArrayProperty = conditionProperty.FindPropertyRelative("conditions");
-						conditionArrayProperty.ClearArray();
-						
-						foreach (EventConditionEntry conditionEntry in e.condition.conditions) {
-							conditionArrayProperty.InsertArrayElementAtIndex(conditionArrayProperty.arraySize);
-							SerializedProperty conditionEntryProperty = conditionArrayProperty.GetArrayElementAtIndex(conditionArrayProperty.arraySize-1);
-							
-							conditionEntryProperty.FindPropertyRelative("conditionParam").stringValue = conditionEntry.conditionParam;
-							conditionEntryProperty.FindPropertyRelative("conditionParamType").enumValueIndex = (int)conditionEntry.conditionParamType;
-							conditionEntryProperty.FindPropertyRelative("conditionMode").enumValueIndex = (int)conditionEntry.conditionMode;
-							conditionEntryProperty.FindPropertyRelative("floatValue").floatValue = conditionEntry.floatValue;
-							conditionEntryProperty.FindPropertyRelative("intValue").intValue = conditionEntry.intValue;
-							conditionEntryProperty.FindPropertyRelative("boolValue").boolValue = conditionEntry.boolValue;
-						}
-					}
+					entries.Add(entry);
 				}
 			}
 		}
 		
-		serializedObject.ApplyModifiedProperties();
+		targetData.data = entries.ToArray();
+		
+		EditorUtility.SetDirty(target);
 	}
 	
 	public void SaveLastEditController(UnityEngine.Object controller) {
