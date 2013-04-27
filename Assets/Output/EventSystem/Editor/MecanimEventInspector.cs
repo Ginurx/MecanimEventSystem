@@ -7,7 +7,7 @@ using System.Collections.Generic;
 [CustomEditor(typeof(MecanimEventData))]
 public class MecanimEventInspector : Editor {
 	// Controller -> Layer -> State
-	private Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>> data;
+	private Dictionary<AnimatorController, Dictionary<int, Dictionary<int, List<MecanimEvent>>>> data;
 	
 	void OnEnable() {
 		LoadData();
@@ -47,29 +47,39 @@ public class MecanimEventInspector : Editor {
 		}
 	}
 	
-	public MecanimEvent[] GetEvents(int controllerId, int layer, int stateNameHash) {
+	public AnimatorController[] GetControllers() {
+		return new List<AnimatorController>(data.Keys).ToArray();
+	}
+	
+	public void AddController(AnimatorController controller) {
+		if (!data.ContainsKey(controller)) {
+			data[controller] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+		}
+	}
+	
+	public MecanimEvent[] GetEvents(AnimatorController controller, int layer, int stateNameHash) {
 		try {
-			return data[controllerId][layer][stateNameHash].ToArray();
+			return data[controller][layer][stateNameHash].ToArray();
 		}
 		catch {
 			return new MecanimEvent[0];
 		}
 	}
 	
-	public void SetEvents(int controllerId, int layer, int stateNameHash, MecanimEvent[] events) {
-		if (!data.ContainsKey(controllerId)) {
-			data[controllerId] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+	public void SetEvents(AnimatorController controller, int layer, int stateNameHash, MecanimEvent[] events) {
+		if (!data.ContainsKey(controller)) {
+			data[controller] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
 		}
 		
-		if (!data[controllerId].ContainsKey(layer)) {
-			data[controllerId][layer] = new Dictionary<int, List<MecanimEvent>>();
+		if (!data[controller].ContainsKey(layer)) {
+			data[controller][layer] = new Dictionary<int, List<MecanimEvent>>();
 		}
 		
-		if (!data[controllerId][layer].ContainsKey(stateNameHash)) {
-			data[controllerId][layer][stateNameHash] = new List<MecanimEvent>();
+		if (!data[controller][layer].ContainsKey(stateNameHash)) {
+			data[controller][layer][stateNameHash] = new List<MecanimEvent>();
 		}
 		
-		data[controllerId][layer][stateNameHash] = new List<MecanimEvent>(events);
+		data[controller][layer][stateNameHash] = new List<MecanimEvent>(events);
 	}
 	
 	private Motion previewedMotion;
@@ -110,9 +120,11 @@ public class MecanimEventInspector : Editor {
 	}
 	
 	public void SetPlaybackTime(float time) {
+		
 		avatarPreview.timeControl.nextCurrentTime = Mathf.Lerp(avatarPreview.timeControl.startTime,
 																avatarPreview.timeControl.stopTime,
 																time);
+
 		Repaint();
 	}
 	
@@ -280,20 +292,23 @@ public class MecanimEventInspector : Editor {
 		
 		MecanimEventData dataSource = target as MecanimEventData;
 		
-		data = new Dictionary<int, Dictionary<int, Dictionary<int, List<MecanimEvent>>>>();
+		data = new Dictionary<AnimatorController, Dictionary<int, Dictionary<int, List<MecanimEvent>>>>();
 		
 		if (dataSource.data == null || dataSource.data.Length == 0)
 			return;
 		
 		foreach(MecanimEventDataEntry entry in dataSource.data) {
 			
-			int animatorControllerId = entry.animatorController.GetInstanceID();
+			AnimatorController animatorController = entry.animatorController as AnimatorController;
 			
-			if (!data.ContainsKey(animatorControllerId))
-				data[animatorControllerId] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+			if (animatorController == null)
+				return;
 			
-			if (!data[animatorControllerId].ContainsKey(entry.layer)) {
-				data[animatorControllerId][entry.layer] = new Dictionary<int, List<MecanimEvent>>();
+			if (!data.ContainsKey(animatorController))
+				data[animatorController] = new Dictionary<int, Dictionary<int, List<MecanimEvent>>>();
+			
+			if (!data[animatorController].ContainsKey(entry.layer)) {
+				data[animatorController][entry.layer] = new Dictionary<int, List<MecanimEvent>>();
 			}
 			
 			List<MecanimEvent> events = new List<MecanimEvent>();
@@ -306,7 +321,7 @@ public class MecanimEventInspector : Editor {
 				}
 			}
 			
-			data[animatorControllerId][entry.layer][entry.stateNameHash] = events;
+			data[animatorController][entry.layer][entry.stateNameHash] = events;
 			
 		}
 	}
@@ -318,15 +333,15 @@ public class MecanimEventInspector : Editor {
 		
 		List<MecanimEventDataEntry> entries = new List<MecanimEventDataEntry>();
 
-		foreach(int controllerId in data.Keys) {
-			foreach(int layer in data[controllerId].Keys) {
-				foreach(int stateNameHash in data[controllerId][layer].Keys) {
-					if (data[controllerId][layer][stateNameHash].Count == 0)
+		foreach(AnimatorController controller in data.Keys) {
+			foreach(int layer in data[controller].Keys) {
+				foreach(int stateNameHash in data[controller][layer].Keys) {
+					
+					if (data[controller][layer][stateNameHash].Count == 0)
 						continue;
 					
-					UnityEngine.Object controller = EditorUtility.InstanceIDToObject(controllerId);
-					if (controller == null) {
-						Debug.Log("Controller whose ID " + controllerId + " is no longer exist when saving data.");
+					if (EditorUtility.InstanceIDToObject(controller.GetInstanceID()) == null) {
+						Debug.Log("Controller whose ID " + controller.GetInstanceID() + " is no longer exist when saving data.");
 						continue;
 					}
 					
@@ -334,7 +349,7 @@ public class MecanimEventInspector : Editor {
 					entry.animatorController = controller;
 					entry.layer = layer;
 					entry.stateNameHash = stateNameHash;
-					entry.events = data[controllerId][layer][stateNameHash].ToArray();;
+					entry.events = data[controller][layer][stateNameHash].ToArray();;
 					
 					entries.Add(entry);
 				}

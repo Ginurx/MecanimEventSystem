@@ -35,7 +35,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 	}
 	
 	void OnEnable() {
-		minSize = new Vector2(350, 190);
+		minSize = new Vector2(450, 190);
 	}
 	
 	void OnDestroy() {
@@ -43,7 +43,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 	}
 	
 	void Update() {
-		minSize = new Vector2(350, 160 + conditionList.Count * conditionList.elementHeight);
+		minSize = new Vector2(minSize.x, 160 + conditionList.Count * conditionList.elementHeight);
 	}
 	
 	void OnGUI() {
@@ -98,6 +98,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 		}
 		
 		GUILayout.FlexibleSpace();
+		GUILayout.Space(20);
 		
 		if (GUILayout.Button("Save", GUILayout.MinWidth(80))) {
 			eventEditing.normalizedTime = eventTemp.normalizedTime;
@@ -111,19 +112,19 @@ public class MecanimEventEditorPopup : EditorWindow {
 			Close();
 		}
 		
+//		GUILayout.Space(20);
+//		
+//		if (GUILayout.Button("Delete", GUILayout.MinWidth(80))) {
+//			editor.DelEvent(eventEditing);
+//			Close();
+//		}
+		
 		GUILayout.Space(20);
-		
-		if (GUILayout.Button("Delete", GUILayout.MinWidth(80))) {
-			editor.DelEvent(eventEditing);
-			Close();
-		}
-		
-		GUILayout.Space(40);
 		
 		if (GUILayout.Button("Cancel", GUILayout.MinWidth(80))) {
 			Close();
 		}
-		GUILayout.FlexibleSpace();
+		GUILayout.Space(20);
 		
 		GUILayout.EndHorizontal();
 		GUILayout.Space(10);

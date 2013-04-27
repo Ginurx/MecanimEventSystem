@@ -81,6 +81,7 @@ public class MecanimEvent {
 	public bool boolParam;
 	
 	public EventCondition condition;
+
 }
 
 [System.Serializable]

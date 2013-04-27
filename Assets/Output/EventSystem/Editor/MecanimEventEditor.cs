@@ -20,11 +20,7 @@ public class MecanimEventEditor : EditorWindow {
 	private AnimatorController targetController;
 	private StateMachine targetStateMachine;
 	private State targetState;
-	
-	
-	private int selectedLayer = 0;
-	private int selectedState = 0;
-	private bool showEventName = true;
+	private MecanimEvent targetEvent;
 	
 	private List<MecanimEvent> displayEvents;
 	
@@ -33,7 +29,7 @@ public class MecanimEventEditor : EditorWindow {
 	}
 	
 	void OnEnable() {
-		minSize = new Vector2(600,320);
+		minSize = new Vector2(850,320);
 	}
 	
 	void OnDisable() {
@@ -58,11 +54,15 @@ public class MecanimEventEditor : EditorWindow {
 	
 	void Reset() {
 		displayEvents = null;
+		
 		targetController = null;
 		targetStateMachine = null;
 		targetState = null;
+		targetEvent = null;
+		
 		selectedLayer = 0;
 		selectedState = 0;
+		selectedEvent = 0;
 		
 		MecanimEventEditorPopup.Destroy();
 	}
@@ -89,7 +89,286 @@ public class MecanimEventEditor : EditorWindow {
 	}
 	
 	private void SaveState() {
-		eventInspector.SetEvents(targetController.GetInstanceID(), selectedLayer, targetState.GetUniqueNameHash(), displayEvents.ToArray());
+		if (targetController != null && targetState != null)
+			eventInspector.SetEvents(targetController, selectedLayer, targetState.GetUniqueNameHash(), displayEvents.ToArray());
+	}
+	
+	Vector2 controllerPanelScrollPos;
+	int selectedController = 0;
+	AnimatorController controllerToAdd;
+	
+	void DrawControllerPanel() {
+		
+		GUILayout.BeginVertical(GUILayout.Width(200));
+		
+		// controller to add field.
+		GUILayout.BeginHorizontal(); {
+			
+			controllerToAdd = EditorGUILayout.ObjectField(controllerToAdd, typeof(AnimatorController), false) as AnimatorController;
+			
+			EditorGUI.BeginDisabledGroup(controllerToAdd == null);
+			
+			if (GUILayout.Button("Add", GUILayout.ExpandWidth(true), GUILayout.Height(16))) {
+				eventInspector.AddController(controllerToAdd);
+			}
+			
+			EditorGUI.EndDisabledGroup();
+
+			//GUILayout.Button("Del", EditorStyles.toolbarButton, GUILayout.Width(38), GUILayout.Height(16));
+			
+			GUILayout.Space(4);
+		
+		}
+		GUILayout.EndHorizontal();
+		
+		// controller list
+		
+		GUILayout.BeginVertical("Box");
+		controllerPanelScrollPos = GUILayout.BeginScrollView(controllerPanelScrollPos);
+		
+		AnimatorController[] controllers = eventInspector.GetControllers();
+			
+		string [] controllerNames = new string[controllers.Length];
+		
+		for (int i = 0; i < controllers.Length; i++) {
+			
+			controllerNames[i] = controllers[i].name;
+			
+		}
+		
+		selectedController = GUILayout.SelectionGrid(selectedController, controllerNames, 1);
+		
+		if (selectedController >= 0 && selectedController < controllers.Length) {
+			
+			targetController = controllers[selectedController];
+			
+			eventInspector.SaveLastEditController(targetController);
+			
+		}
+		else {
+			targetController = null;
+			targetStateMachine = null;
+			targetState = null;
+			targetEvent = null;
+		}
+			
+
+		GUILayout.EndScrollView();
+		GUILayout.EndVertical();
+		
+		
+		GUILayout.EndVertical();
+		
+	}
+	
+	Vector2 layerPanelScrollPos;
+	int selectedLayer = 0;
+	
+	void DrawLayerPanel() {
+		
+		GUILayout.BeginVertical(GUILayout.Width(200));
+		
+		if (targetController != null) {
+		
+			int layerCount = targetController.GetLayerCount();	
+			GUILayout.Label(layerCount + " layer(s) in selected controller");
+			
+			GUILayout.BeginVertical("Box");
+			layerPanelScrollPos = GUILayout.BeginScrollView(layerPanelScrollPos);
+			
+			string[] layerNames = new string[layerCount];
+			
+			for (int layer = 0; layer < layerCount; layer++) {
+				layerNames[layer] = "[" + layer.ToString() + "]" + targetController.GetLayerName(layer);
+			}
+			
+			selectedLayer = GUILayout.SelectionGrid(selectedLayer, layerNames, 1);
+			
+			if (selectedLayer >= 0 && selectedLayer < layerCount) {
+				targetStateMachine = targetController.GetLayerStateMachine(selectedLayer);
+			}
+			else {
+				targetStateMachine = null;
+				targetState = null;
+				targetEvent = null;
+			}
+			
+			GUILayout.EndScrollView();
+			GUILayout.EndVertical();
+			
+		}
+		else {
+			GUILayout.Label("No layer available.");
+		}
+		
+		GUILayout.EndVertical();
+	}
+	
+	Vector2 statePanelScrollPos;
+	int selectedState = 0;
+	
+	void DrawStatePanel() {
+		
+		GUILayout.BeginVertical(GUILayout.Width(200));
+		
+		if (targetStateMachine != null) {
+			
+			List<State> availableStates = targetStateMachine.statesRecursive;
+			List<string> stateNames = new List<string>();
+			
+			foreach (State s in availableStates) {
+				stateNames.Add(s.GetUniqueName());
+			}
+			
+			GUILayout.Label(availableStates.Count + " state(s) in selected layer.");
+			
+			GUILayout.BeginVertical("Box");
+			statePanelScrollPos = GUILayout.BeginScrollView(statePanelScrollPos);
+			
+			selectedState = GUILayout.SelectionGrid(selectedState, stateNames.ToArray(), 1);
+			
+			if (selectedState >= 0 && selectedState < availableStates.Count) {
+				targetState = availableStates[selectedState];
+			}
+			else {
+				targetState = null;
+				targetEvent = null;
+			}
+			
+			GUILayout.EndScrollView();
+			GUILayout.EndVertical();
+			
+		}
+		else {
+			
+			GUILayout.Label("No state machine available.");
+		}
+		
+		GUILayout.EndVertical();
+	}
+	
+	Vector2 eventPanelScrollPos;
+	int selectedEvent = 0;
+	
+	void DrawEventPanel() {
+		
+		GUILayout.BeginVertical();
+		
+		if (targetState != null) {
+			
+			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController, selectedLayer, targetState.GetUniqueNameHash()));
+			displayEvents.Sort(
+				delegate(MecanimEvent a, MecanimEvent b) 
+				{
+					return a.normalizedTime.CompareTo(b.normalizedTime); 
+				} 
+			);
+			
+			GUILayout.Label(displayEvents.Count + " event(s) in this state.");
+			
+			List<string> eventNames = new List<string>();
+			
+			foreach (MecanimEvent e in displayEvents) {
+				eventNames.Add(string.Format("{0}({1})@{2}", e.functionName, e.parameter, e.normalizedTime.ToString("0.0000")));
+			}
+			
+			GUILayout.BeginVertical("Box");
+			eventPanelScrollPos = GUILayout.BeginScrollView(eventPanelScrollPos);
+			
+			selectedEvent = GUILayout.SelectionGrid(selectedEvent, eventNames.ToArray(), 1);
+			
+			if (selectedEvent >= 0 && selectedEvent < displayEvents.Count) {
+				targetEvent = displayEvents[selectedEvent];
+			}
+			else {
+				targetEvent = null;
+			}
+			
+			GUILayout.EndScrollView();
+			GUILayout.EndVertical();
+			
+		}
+		else {
+			GUILayout.Label("No event.");
+		}
+		
+		GUILayout.EndVertical();
+	}
+	
+	private float playbackTime = 0.0f;
+	
+	private bool enableTempPreview = false;
+	private float tempPreviewPlaybackTime = 0.0f;
+	
+	private static int timelineHash = "timelinecontrol".GetHashCode();
+	
+	void DrawTimelinePanel() {
+		
+		if (!enableTempPreview)
+			playbackTime = eventInspector.GetPlaybackTime();
+		
+		
+		GUILayout.BeginVertical(); {
+			
+			GUILayout.Space(10);
+		
+			GUILayout.BeginHorizontal(); {
+				
+				GUILayout.Space(20);
+				
+				playbackTime = Timeline(playbackTime);
+				
+				GUILayout.Space(10);
+				
+			}
+			GUILayout.EndHorizontal();
+			
+			GUILayout.FlexibleSpace();
+			
+			GUILayout.BeginHorizontal(); {
+				
+				GUILayout.FlexibleSpace();
+				
+				if (GUILayout.Button("Add", GUILayout.Width(80))) {
+					MecanimEvent newEvent = new MecanimEvent();
+					newEvent.normalizedTime = playbackTime;
+					newEvent.functionName = "MessageName";
+					newEvent.paramType = MecanimEventParamTypes.None;
+					
+					displayEvents.Add(newEvent);
+					MecanimEventEditorPopup.Show(this, newEvent, GetConditionParameters());
+				}
+				
+				if (GUILayout.Button("Del", GUILayout.Width(80))) {
+					DelEvent(targetEvent);
+				}
+				
+				EditorGUI.BeginDisabledGroup(targetEvent == null);
+				
+				if (GUILayout.Button("Edit", GUILayout.Width(80))) {
+					MecanimEventEditorPopup.Show(this, targetEvent, GetConditionParameters());
+				}
+				
+				EditorGUI.EndDisabledGroup();
+				
+				if (GUILayout.Button("Save", GUILayout.Width(80))) {
+					eventInspector.SaveData();
+				}
+			}
+			GUILayout.EndHorizontal();
+		
+		}
+		GUILayout.EndVertical();
+		
+		if (enableTempPreview) {
+			eventInspector.SetPlaybackTime(tempPreviewPlaybackTime);
+			eventInspector.StopPlaying();
+		}
+		else {
+			eventInspector.SetPlaybackTime(playbackTime);
+		}
+		
+		SaveState();
 	}
 	
 	void OnGUI() {
@@ -101,144 +380,50 @@ public class MecanimEventEditor : EditorWindow {
 		
 		RemoveNotification();
 		
-		EditorGUI.BeginChangeCheck();
-		
-		EditorGUILayout.BeginHorizontal();
-		EditorGUILayout.LabelField("Put an AnimatorController here");
-		targetController = EditorGUILayout.ObjectField(targetController, typeof(AnimatorController), false) as AnimatorController;
-		EditorGUILayout.EndHorizontal();
-		
-		if (targetController == null)
-			return;
-		
-		eventInspector.SaveLastEditController(targetController);
-		
-		int layerCount = targetController.GetLayerCount();		
-		EditorGUILayout.LabelField(layerCount + " layer be found. Please select a layer to continue.");
-		
-		string[] layerNames = new string[layerCount];
-		
-		for (int layer = 0; layer < layerCount; layer++) {
-			layerNames[layer] = layer.ToString() + " " + targetController.GetLayerName(layer);
-		}
-		
-		selectedLayer = Mathf.Clamp(selectedLayer, 0, layerCount - 1);
-		selectedLayer = GUILayout.Toolbar(selectedLayer, layerNames);
-		
-		targetStateMachine = targetController.GetLayerStateMachine(selectedLayer);
-		
-		List<State> availabeStates = targetStateMachine.statesRecursive;
-		List<string> stateNames = new List<string>();
-		
-		foreach (State s in availabeStates) {
-			stateNames.Add(s.GetUniqueName());
-		}
-		
-		if (availabeStates.Count == 0) {
-			EditorGUILayout.LabelField("No state available in this layer.");
-			return;
-		}
+		GUILayout.BeginHorizontal(); {
 			
-		EditorGUILayout.LabelField(availabeStates.Count + " state be found. Please select a state, where events will be inserted into.");
-		
-		selectedState = Mathf.Clamp(selectedState, 0, availabeStates.Count - 1);
-		
-		selectedState = GUILayout.SelectionGrid(selectedState, stateNames.ToArray(), 5);
-		
-		targetState = availabeStates[selectedState];
-		
-		if (targetState.GetMotion(0) != null) {
-			eventInspector.SetPreviewMotion(targetState.GetMotion(0));
-			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController.GetInstanceID(), selectedLayer, targetState.GetUniqueNameHash()));
+			EditorGUI.BeginChangeCheck();
 			
-			if (EditorGUI.EndChangeCheck())
+			DrawControllerPanel();
+			
+			DrawLayerPanel();
+			
+			DrawStatePanel();
+			
+			if (EditorGUI.EndChangeCheck()) {
 				MecanimEventEditorPopup.Destroy();
+			}
 			
-			EditorGUILayout.Separator();
-			EditorGUILayout.Separator();
+			DrawEventPanel();
 			
-			BeginWindows();
-			GUI.Window(0, new Rect(0, position.height - 180, position.width, 180), TimelineWindow, targetState.GetName());
-			EndWindows();
+		}
+		GUILayout.EndHorizontal();
+		
+		if (targetState != null && targetState.GetMotion(0) != null) {
+			eventInspector.SetPreviewMotion(targetState.GetMotion(0));
 		}
 		else {
 			eventInspector.SetPreviewMotion(null);
 		}
-	}
-	
-	private float playbackTime = 0.0f;
-	
-	private bool enableTempPreview = false;
-	private float tempPreviewPlaybackTime = 0.0f;
-	
-	private static int timelineHash = "timelinecontrol".GetHashCode();
-	private static int eventKeyHash = "eventkeycontrol".GetHashCode();
-	private Vector2 scrollPos = new Vector2(0,0);
-	
-	private void TimelineWindow(int id) {
-		// List
-		Rect listRect = new Rect(10,20,position.width * 0.3f,150);
 		
-		GUILayout.BeginArea(listRect, "List of Events",GUI.skin.window);
-		scrollPos = GUILayout.BeginScrollView(scrollPos);
+		GUILayout.Space(5);
 		
-		displayEvents.Sort(delegate(MecanimEvent a, MecanimEvent b) { return a.normalizedTime.CompareTo(b.normalizedTime); } );
-		
-		foreach(MecanimEvent e in displayEvents) {
-			string labalName = string.Format("{0}({1})@{2}", e.functionName, e.parameter, e.normalizedTime.ToString("0.0000"));
-			if (GUILayout.Button(labalName)) {
-				MecanimEventEditorPopup.Show(this, e, GetConditionParameters());
-			}
-		}
-		
-		GUILayout.EndScrollView();
-		GUILayout.EndArea();
-		
-		// Timeline
-		
-		Rect rect = new Rect(position.width * 0.3f + 20, 50, position.width*0.7f-30, 180);	
-		
-		if (!enableTempPreview)
-			playbackTime = eventInspector.GetPlaybackTime();
-		
-		playbackTime = Timeline(rect, playbackTime);
-		
-		if (enableTempPreview) {
-			eventInspector.SetPlaybackTime(tempPreviewPlaybackTime);
-			eventInspector.StopPlaying();
-		}
-		else {
-			eventInspector.SetPlaybackTime(playbackTime);
-		}
-
-		GUI.Label(new Rect(position.width - 50, 40, 50, 15), playbackTime.ToString("0.0000"));
-		
-		foreach(MecanimEvent e in displayEvents) {
-			DrawEventKey(rect, e);
-		}
-		
-		if (GUI.Button(new Rect(position.width * 0.3f + 20 + 5, 140, 80, 20), "Add Event")) {
-			MecanimEvent newEvent = new MecanimEvent();
-			newEvent.normalizedTime = playbackTime;
-			newEvent.functionName = "MessageName";
-			newEvent.paramType = MecanimEventParamTypes.None;
+		GUILayout.BeginHorizontal(GUILayout.MaxHeight(100)); {
 			
-			displayEvents.Add(newEvent);
-			MecanimEventEditorPopup.Show(this, newEvent, GetConditionParameters());
+			
+			
+			DrawTimelinePanel();
+			
 		}
+		GUILayout.EndHorizontal();
 		
-		if (GUI.Button(new Rect(position.width * 0.3f + 20 + 105, 140, 80, 20), "Save")) {
-			eventInspector.SaveData();
-		}
-		
-		EditorGUI.LabelField(new Rect(position.width - 150, 140, 150, 20), "Show Event Name");
-		showEventName = EditorGUI.Toggle(new Rect(position.width - 30, 140, 30, 20), showEventName);
-		
-		SaveState();
 	}
 	
-	private float Timeline(Rect rect, float time) {
-		int timelineId = GUIUtility.GetControlID(timelineHash, FocusType.Native);
+	private float Timeline(float time) {
+		
+		Rect rect = GUILayoutUtility.GetRect(500, 10000, 50, 50);
+		
+		int timelineId = GUIUtility.GetControlID(timelineHash, FocusType.Native, rect);
 		
 		Rect thumbRect = new Rect(rect.x + rect.width * time - 5, rect.y + 2, 10, 10);
 		
@@ -246,7 +431,6 @@ public class MecanimEventEditor : EditorWindow {
 		
 		switch(e.type) {
 		case EventType.Repaint:
-			//GUI.skin.horizontalSlider.Draw(rect, new GUIContent(), timelineId);
 			Rect lineRect = new Rect(rect.x, rect.y+10, rect.width, 1.5f);
 			DrawTimeLine(lineRect, time);
 			GUI.skin.horizontalSliderThumb.Draw(thumbRect, new GUIContent(), timelineId);
@@ -268,14 +452,29 @@ public class MecanimEventEditor : EditorWindow {
 			
 		case EventType.MouseDrag:
 			if (GUIUtility.hotControl == timelineId) {
-				Vector2 guiPos = e.mousePosition;
 				
+				Vector2 guiPos = e.mousePosition;
 				float clampedX = Mathf.Clamp(guiPos.x, rect.x, rect.x + rect.width);
 				time = (clampedX - rect.x) / rect.width;
 				
 				e.Use();
 			}
 			break;
+		}
+		
+		if (displayEvents != null) {
+		
+			foreach(MecanimEvent me in displayEvents) {
+				
+				if (me == targetEvent)
+					continue;
+				
+				DrawEventKey(rect, me);
+			}
+			
+			if (targetEvent != null)
+				DrawEventKey(rect, targetEvent);
+			
 		}
 		
 		return time;
@@ -323,53 +522,89 @@ public class MecanimEventEditor : EditorWindow {
 		GL.End();
 	}
 	
+	private void SetActiveEvent(MecanimEvent key) {
+		int i =  displayEvents.IndexOf(key);
+		if (i >= 0) {
+			selectedEvent = i;
+			targetEvent = key;
+		}
+	}
+	
+	private int hotEventKey = 0;
+	
 	private void DrawEventKey(Rect rect, MecanimEvent key) {
 		float keyTime = key.normalizedTime;
 		
-		int eventKeyCtrl = GUIUtility.GetControlID(eventKeyHash, FocusType.Native);
-		
 		Rect keyRect = new Rect(rect.x + rect.width * keyTime - 3, rect.y+25, 6, 18);
+		
+		int eventKeyCtrl = key.GetHashCode();
 		
 		Event e = Event.current;
 		
 		switch(e.type) {
 		case EventType.Repaint:
 			Color savedColor = GUI.color;
-			GUI.color = Color.green;
+			
+			if (targetEvent == key)
+				GUI.color = Color.red;
+			else
+				GUI.color = Color.green;
+			
 			GUI.skin.button.Draw(keyRect, new GUIContent(), eventKeyCtrl);
+			
 			GUI.color = savedColor;
 			
-			if (showEventName || keyRect.Contains(e.mousePosition)) {
-				Vector2 size = GUI.skin.textField.CalcSize(new GUIContent(key.functionName));
+			if (hotEventKey == eventKeyCtrl || (hotEventKey == 0 && keyRect.Contains(e.mousePosition))) {
+				string labelString = string.Format("{0}({1})@{2}", key.functionName, key.parameter, key.normalizedTime.ToString("0.0000"));
+				Vector2 size = EditorStyles.largeLabel.CalcSize(new GUIContent(labelString));
 				
-				Rect infoRect= new Rect(rect.x + rect.width * keyTime - size.x/2, rect.y - 30, size.x, size.y);
-				GUI.skin.textField.Draw(infoRect, new GUIContent(key.functionName), eventKeyCtrl);
+				Rect infoRect= new Rect(rect.x + rect.width * keyTime - size.x/2, rect.y + 50, size.x, size.y);
+				EditorStyles.largeLabel.Draw(infoRect, new GUIContent(labelString), eventKeyCtrl);
 			}
 			break;
 			
 		case EventType.MouseDown:
 			if (keyRect.Contains(e.mousePosition)) {
-				GUIUtility.hotControl = eventKeyCtrl;
+				
+				hotEventKey = eventKeyCtrl;
 				enableTempPreview =true;
 				tempPreviewPlaybackTime = key.normalizedTime;
+				
+				SetActiveEvent(key);
+				
+				if (e.clickCount > 1)
+					MecanimEventEditorPopup.Show(this, key, GetConditionParameters());
+				
 				e.Use();	
 			}
 			break;
+			
 		case EventType.MouseDrag:
-			if (GUIUtility.hotControl == eventKeyCtrl) {
-				Vector2 guiPos = e.mousePosition;
-				float clampedX = Mathf.Clamp(guiPos.x, rect.x, rect.x + rect.width);
-				key.normalizedTime = (clampedX - rect.x) / rect.width;
-				tempPreviewPlaybackTime = key.normalizedTime;
+			if (hotEventKey == eventKeyCtrl) {
+				
+				if (e.button == 0) {
+					Vector2 guiPos = e.mousePosition;
+					float clampedX = Mathf.Clamp(guiPos.x, rect.x, rect.x + rect.width);
+					key.normalizedTime = (clampedX - rect.x) / rect.width;
+					tempPreviewPlaybackTime = key.normalizedTime;
+					
+					SetActiveEvent(key);
+				}
+				
 				e.Use();
 			}
 			break;
+			
 		case EventType.MouseUp:
-			if (GUIUtility.hotControl == eventKeyCtrl) {
-				GUIUtility.hotControl = 0;
+			if (hotEventKey == eventKeyCtrl) {
+				
+				hotEventKey = 0;
 				enableTempPreview = false;
 				eventInspector.SetPlaybackTime(playbackTime);		// reset to original time
-				MecanimEventEditorPopup.Show(this, key, GetConditionParameters());
+				
+				if (e.button == 1)
+					MecanimEventEditorPopup.Show(this, key, GetConditionParameters());
+				
 				e.Use();
 			}
 			break;
