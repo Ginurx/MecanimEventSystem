@@ -17,6 +17,8 @@ public class MecanimEventEditor : EditorWindow {
 		}
 	}
 	
+	public static MecanimEvent clipboard;
+	
 	private AnimatorController targetController;
 	private StateMachine targetStateMachine;
 	private State targetState;
@@ -352,6 +354,26 @@ public class MecanimEventEditor : EditorWindow {
 				if (GUILayout.Button("Del", GUILayout.Width(80))) {
 					DelEvent(targetEvent);
 				}
+				
+				EditorGUI.BeginDisabledGroup(targetEvent == null);
+				
+				if (GUILayout.Button("Copy", GUILayout.Width(80))) {
+					clipboard = new MecanimEvent(targetEvent);
+				}
+				
+				EditorGUI.EndDisabledGroup();
+				
+				EditorGUI.BeginDisabledGroup(clipboard == null);
+				
+				if (GUILayout.Button("Paste", GUILayout.Width(80))) {
+					MecanimEvent newEvent = new MecanimEvent(clipboard);
+					displayEvents.Add(newEvent);
+					SortEvents();
+					
+					SetActiveEvent(newEvent);
+				}
+				
+				EditorGUI.EndDisabledGroup();
 				
 				EditorGUI.BeginDisabledGroup(targetEvent == null);
 				
