@@ -121,10 +121,11 @@ public class MecanimEventInspector : Editor {
 	
 	public void SetPlaybackTime(float time) {
 		
-		avatarPreview.timeControl.nextCurrentTime = Mathf.Lerp(avatarPreview.timeControl.startTime,
+		if (avatarPreview != null) {
+			avatarPreview.timeControl.nextCurrentTime = Mathf.Lerp(avatarPreview.timeControl.startTime,
 																avatarPreview.timeControl.stopTime,
 																time);
-
+		}
 		Repaint();
 	}
 	

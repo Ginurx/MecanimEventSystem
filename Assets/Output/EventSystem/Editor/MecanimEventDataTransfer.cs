@@ -17,6 +17,7 @@ public class MecanimEventDataTransfer : EditorWindow {
 		public int eventCount = 0;
 	}
 	
+	[MenuItem("Window/Mecanim Event Data Transfer")]
 	public static void Init() {
 		EditorWindow.GetWindow<MecanimEventDataTransfer>();
 	}

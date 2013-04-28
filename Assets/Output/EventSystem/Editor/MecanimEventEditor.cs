@@ -52,6 +52,17 @@ public class MecanimEventEditor : EditorWindow {
 		}
 	}
 	
+	void SortEvents() {
+		if (displayEvents != null) {
+			displayEvents.Sort(
+				delegate(MecanimEvent a, MecanimEvent b) 
+				{
+					return a.normalizedTime.CompareTo(b.normalizedTime); 
+				} 
+			);
+		}
+	}
+	
 	void Reset() {
 		displayEvents = null;
 		
@@ -257,12 +268,7 @@ public class MecanimEventEditor : EditorWindow {
 		if (targetState != null) {
 			
 			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController, selectedLayer, targetState.GetUniqueNameHash()));
-			displayEvents.Sort(
-				delegate(MecanimEvent a, MecanimEvent b) 
-				{
-					return a.normalizedTime.CompareTo(b.normalizedTime); 
-				} 
-			);
+			SortEvents();
 			
 			GUILayout.Label(displayEvents.Count + " event(s) in this state.");
 			
@@ -336,6 +342,10 @@ public class MecanimEventEditor : EditorWindow {
 					newEvent.paramType = MecanimEventParamTypes.None;
 					
 					displayEvents.Add(newEvent);
+					SortEvents();
+					
+					SetActiveEvent(newEvent);
+					
 					MecanimEventEditorPopup.Show(this, newEvent, GetConditionParameters());
 				}
 				
@@ -354,6 +364,11 @@ public class MecanimEventEditor : EditorWindow {
 				if (GUILayout.Button("Save", GUILayout.Width(80))) {
 					eventInspector.SaveData();
 				}
+				
+				if (GUILayout.Button("Close", GUILayout.Width(80))) {
+					Close();
+				}
+				
 			}
 			GUILayout.EndHorizontal();
 		
