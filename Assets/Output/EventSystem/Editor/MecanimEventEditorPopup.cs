@@ -72,6 +72,9 @@ public class MecanimEventEditorPopup : EditorWindow {
 			break;
 		}
 		
+		GUIContent toggleLabel = new GUIContent("Critical", "A critical event won't be missed even state was interrupted.");
+		eventTemp.critical = EditorGUILayout.Toggle(toggleLabel, eventTemp.critical);
+		
 		if (availableParameters.Length > 0)
 			conditionList.DoList();
 		else
@@ -106,6 +109,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 			eventEditing.stringParam = eventTemp.stringParam;
 			eventEditing.boolParam = eventTemp.boolParam;
 			eventEditing.condition = eventTemp.condition;
+			eventEditing.critical = eventTemp.critical;
 			Close();
 		}
 		

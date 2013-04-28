@@ -52,6 +52,8 @@ public class MecanimEvent {
 
 		condition = new EventCondition();
 		condition.conditions = new List<EventConditionEntry>(other.condition.conditions);
+		
+		critical = other.critical;
 	}
 	
 	public string functionName;
@@ -81,7 +83,7 @@ public class MecanimEvent {
 	public bool boolParam;
 	
 	public EventCondition condition;
-
+	public bool critical = false;
 }
 
 [System.Serializable]

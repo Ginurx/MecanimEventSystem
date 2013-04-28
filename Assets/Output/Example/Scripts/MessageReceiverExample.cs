@@ -24,6 +24,10 @@ public class MessageReceiverExample : MonoBehaviour {
 		msg = string.Format("OnJumpGrounded received with parameter: {0} {1}", param.GetType(), param);
 	}
 	
+	void JumpEndCritical() {
+		msg = string.Format("JumpEndCritical received with no parameter");
+	}
+	
 	void OnWaved() {
 		msg = string.Format("OnWaved received");
 	}

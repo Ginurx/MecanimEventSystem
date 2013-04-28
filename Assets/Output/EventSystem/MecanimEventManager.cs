@@ -43,8 +43,9 @@ public static class MecanimEventManager {
 		Dictionary<int, AnimatorStateInfo> lastLayerState = lastStates[animatorHash];
 		
 		for (int layer = 0; layer < layerCount; layer++) {
-			if (!lastLayerState.ContainsKey(layer))
+			if (!lastLayerState.ContainsKey(layer)) {
 				lastLayerState[layer] = new AnimatorStateInfo();
+			}
 			
 			AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(layer);
 			
@@ -59,7 +60,7 @@ public static class MecanimEventManager {
 						allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, lastNormalizedTime, currNormalizedTime));
 					}
 					else {
-						allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, lastNormalizedTime, 1.0f));
+						allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, lastNormalizedTime, 1.00001f));
 						allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, 0.0f, currNormalizedTime));
 					}
 				}
@@ -67,12 +68,25 @@ public static class MecanimEventManager {
 					float start = Mathf.Clamp01(lastLayerState[layer].normalizedTime);
 					float end = Mathf.Clamp01(stateInfo.normalizedTime);
 					
-					if (start != end)
-						allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, start, end));
+					if (lastLoop == 0 && currLoop == 0) {
+						if (start != end)
+							allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, start, end));
+					}
+					else if (lastLoop == 0 && currLoop > 0) {
+						allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, lastLayerState[layer].nameHash, start, 1.00001f));
+					}
+					else {
+						
+					}
 				}
 			}
 			else {
+				
 				allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, stateInfo.nameHash, 0.0f, currNormalizedTime));
+			
+				if (!lastLayerState[layer].loop) {
+					allEvents.AddRange(CollectEvents(animator, animatorControllerId, layer, lastLayerState[layer].nameHash, lastNormalizedTime, 1.00001f, true));
+				}
 			}
 			
 			lastLayerState[layer] = stateInfo;
@@ -81,7 +95,7 @@ public static class MecanimEventManager {
 		return allEvents.ToArray();
 	}
 	
-	private static MecanimEvent[] CollectEvents(Animator animator, int animatorControllerId, int layer, int nameHash, float normalizedTimeStart, float normalizedTimeEnd) {
+	private static MecanimEvent[] CollectEvents(Animator animator, int animatorControllerId, int layer, int nameHash, float normalizedTimeStart, float normalizedTimeEnd, bool onlyCritical = false) {
 		List<MecanimEvent> events;
 		
 		if (loadedData.ContainsKey(animatorControllerId) &&
@@ -97,9 +111,15 @@ public static class MecanimEventManager {
 		List<MecanimEvent> ret = new List<MecanimEvent>();
 		
 		foreach (MecanimEvent e in events) {
+			
 			if (e.normalizedTime >= normalizedTimeStart && e.normalizedTime < normalizedTimeEnd) {
-				if (e.condition.Test(animator))
+				if (e.condition.Test(animator)) {
+					
+					if (onlyCritical && !e.critical)
+						continue;
+					
 					ret.Add(new MecanimEvent(e));
+				}
 			}
 		}
 		
