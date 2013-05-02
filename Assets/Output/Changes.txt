@@ -1,0 +1,32 @@
+Ver2.5
+*A brand new editor view. Much more easy to edit.
+*Critical event support what can be used when a event must be fired even current state was interruptted. Only non-loop state works.
+*Timeline was rewritten. Event key can be dragged without any problem now.
+*Multi data source support
+
+Ver2.3
+*Copy&Paste (in popup window)
+
+Ver2.2
+*Compatible with Unity 4.1.
+*Event label shows parameter.
+
+Ver2.1
+*Save last edited controller.
+*Event key is no more overlap with timeline thumb. 
+*Timeline looks more professional now.
+*Added a list of events in order to help editing when events get too closed.
+*Added boolean type parameter.
+
+Ver2.0
+*Time line is much more fluent now and would work correctly when animation clip is very short.
+
+Ver1.8
+*Fixed profiler sample error.
+*Event key is draggable now.
+
+Ver1.7
+*Reduced package size
+*Save the reference to AnimatorController instead of its instance id since there is bug in Unity that instance id will occasionally change.
+*Non loop state will send events correctly.
+*Emit type - default, upward, broadcast - is provided.
