@@ -26,6 +26,8 @@ public enum EventConditionModes {
 
 [System.Serializable]
 public class MecanimEvent {
+	public static EventContext Context { protected set; get; }
+	
 	public MecanimEvent() {
 		condition = new EventCondition();
 	}
@@ -84,6 +86,19 @@ public class MecanimEvent {
 	
 	public EventCondition condition;
 	public bool critical = false;
+	
+	private EventContext context;
+	
+	public void SetContext(EventContext context)
+	{
+		this.context = context;
+		this.context.current = this;
+	}
+	
+	public static void SetCurrentContext(MecanimEvent e)
+	{
+		MecanimEvent.Context = e.context;
+	}
 }
 
 [System.Serializable]
@@ -175,4 +190,12 @@ public class EventConditionEntry {
 	public float floatValue;
 	public int intValue;
 	public bool boolValue;
+}
+
+public struct EventContext {
+	public int controllerId;
+	public int layer;
+	public int stateHash;
+	public int tagHash;
+	public MecanimEvent current;
 }

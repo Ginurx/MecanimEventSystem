@@ -31,6 +31,9 @@ public class MecanimEventEmitter : MonoBehaviour {
 		MecanimEvent[] events = MecanimEventManager.GetEvents(animatorController.GetInstanceID(), animator);
 		
 		foreach (MecanimEvent e in events) {
+			
+			MecanimEvent.SetCurrentContext(e);
+			
 			switch(emitType)
 			{
 			case MecanimEventEmitTypes.Upwards:

@@ -6,6 +6,11 @@ public class MessageReceiverExample : MonoBehaviour {
 	
 	void OnIdleUpdate(float param) {
 		msg = string.Format("OnIdleUpdate received with parameter: {0} {1}", param.GetType(), param);
+		
+		// You can also get event context by accessing ...
+		// MecanimEvent.Context
+		
+		//Debug.Log(MecanimEvent.Context.stateHash);
 	}
 	
 	void OnLeftFootGrounded(int param) {
