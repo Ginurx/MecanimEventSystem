@@ -1,3 +1,6 @@
+Ver2.5.1
+*Event context. Added a static member - Context - to  MecanimEvent class.
+
 Ver2.5
 *A brand new editor view. Much more easy to edit.
 *Critical event support what can be used when a event must be fired even current state was interruptted. Only non-loop state works.
