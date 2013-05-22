@@ -83,16 +83,19 @@ public class MecanimEventEditor : EditorWindow {
 	public KeyValuePair<string, EventConditionParamTypes>[] GetConditionParameters() {
 		List<KeyValuePair<string, EventConditionParamTypes>> ret = new List<KeyValuePair<string, EventConditionParamTypes>>();
 		if (targetController != null) {
-			for (int i = 0; i < targetController.GetEventCount(); i++) {
-				switch(targetController.GetEventType(i)) {
-				case 1:		// float
-					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(targetController.GetEventName(i), EventConditionParamTypes.Float));
+			for (int i = 0; i < targetController.parameterCount; i++) {
+				
+				AnimatorControllerParameter animatorParam = targetController.GetParameter(i);
+				
+				switch(animatorParam.type) {
+				case AnimatorControllerParameterType.Float:		// float
+					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(animatorParam.name, EventConditionParamTypes.Float));
 					break;
-				case 3:		// int
-					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(targetController.GetEventName(i), EventConditionParamTypes.Int));
+				case AnimatorControllerParameterType.Int:		// int
+					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(animatorParam.name, EventConditionParamTypes.Int));
 					break;
-				case 4:		// bool
-					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(targetController.GetEventName(i), EventConditionParamTypes.Boolean));
+				case AnimatorControllerParameterType.Bool:		// bool
+					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(animatorParam.name, EventConditionParamTypes.Boolean));
 					break;
 				}
 			}
@@ -103,7 +106,7 @@ public class MecanimEventEditor : EditorWindow {
 	
 	private void SaveState() {
 		if (targetController != null && targetState != null)
-			eventInspector.SetEvents(targetController, selectedLayer, targetState.GetUniqueNameHash(), displayEvents.ToArray());
+			eventInspector.SetEvents(targetController, selectedLayer, targetState.uniqueNameHash, displayEvents.ToArray());
 	}
 	
 	Vector2 controllerPanelScrollPos;
@@ -183,7 +186,7 @@ public class MecanimEventEditor : EditorWindow {
 		
 		if (targetController != null) {
 		
-			int layerCount = targetController.GetLayerCount();	
+			int layerCount = targetController.layerCount;	
 			GUILayout.Label(layerCount + " layer(s) in selected controller");
 			
 			GUILayout.BeginVertical("Box");
@@ -192,13 +195,13 @@ public class MecanimEventEditor : EditorWindow {
 			string[] layerNames = new string[layerCount];
 			
 			for (int layer = 0; layer < layerCount; layer++) {
-				layerNames[layer] = "[" + layer.ToString() + "]" + targetController.GetLayerName(layer);
+				layerNames[layer] = "[" + layer.ToString() + "]" + targetController.GetLayer(layer).name;
 			}
 			
 			selectedLayer = GUILayout.SelectionGrid(selectedLayer, layerNames, 1);
 			
 			if (selectedLayer >= 0 && selectedLayer < layerCount) {
-				targetStateMachine = targetController.GetLayerStateMachine(selectedLayer);
+				targetStateMachine = targetController.GetLayer(selectedLayer).stateMachine;
 			}
 			else {
 				targetStateMachine = null;
@@ -226,11 +229,11 @@ public class MecanimEventEditor : EditorWindow {
 		
 		if (targetStateMachine != null) {
 			
-			List<State> availableStates = targetStateMachine.statesRecursive;
+			List<State> availableStates = GetStatesRecursive(targetStateMachine);
 			List<string> stateNames = new List<string>();
 			
 			foreach (State s in availableStates) {
-				stateNames.Add(s.GetUniqueName());
+				stateNames.Add(s.uniqueName);
 			}
 			
 			GUILayout.Label(availableStates.Count + " state(s) in selected layer.");
@@ -269,7 +272,7 @@ public class MecanimEventEditor : EditorWindow {
 		
 		if (targetState != null) {
 			
-			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController, selectedLayer, targetState.GetUniqueNameHash()));
+			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController, selectedLayer, targetState.uniqueNameHash));
 			SortEvents();
 			
 			GUILayout.Label(displayEvents.Count + " event(s) in this state.");
@@ -436,8 +439,8 @@ public class MecanimEventEditor : EditorWindow {
 		}
 		GUILayout.EndHorizontal();
 		
-		if (targetState != null && targetState.GetMotion(0) != null) {
-			eventInspector.SetPreviewMotion(targetState.GetMotion(0));
+		if (targetState != null && targetState.GetMotion() != null) {
+			eventInspector.SetPreviewMotion(targetState.GetMotion());
 		}
 		else {
 			eventInspector.SetPreviewMotion(null);
@@ -646,5 +649,26 @@ public class MecanimEventEditor : EditorWindow {
 			}
 			break;
 		}
+	}
+	
+	private State[] GetStates(StateMachine sm)
+	{
+		State[] array = new State[sm.stateCount];
+		for (int i = 0; i < sm.stateCount; i++)
+		{
+			array[i] = sm.GetState(i);
+		}
+		return array;
+	}
+	
+	private List<State> GetStatesRecursive(StateMachine sm)
+	{
+		List<State> list = new List<State>();
+		list.AddRange(GetStates(sm));
+		for (int i = 0; i < sm.stateMachineCount; i++)
+		{
+			list.AddRange(GetStatesRecursive(sm.GetStateMachine(i)));
+		}
+		return list;
 	}
 }

@@ -35,11 +35,11 @@ public class MecanimEventInspector : Editor {
 			
 			BlendTree bt = previewedMotion as BlendTree;
 			
-			for (int i = 0; i < bt.GetRecursiveBlendEventCount(); i++) {
-				float min = bt.GetRecursiveBlendEventMin(i);
-				float max = bt.GetRecursiveBlendEventMax(i);
+			for (int i = 0; i < bt.GetRecursiveBlendParamCount(); i++) {
+				float min = bt.GetRecursiveBlendParamMin(i);
+				float max = bt.GetRecursiveBlendParamMax(i);
 				
-				string paramName = bt.GetRecursiveBlendEvent(i);
+				string paramName = bt.GetRecursiveBlendParam(i);
 				float value = Mathf.Clamp(avatarPreview.Animator.GetFloat(paramName), min, max);
 				value = EditorGUILayout.Slider(paramName, value, min, max);
 				avatarPreview.Animator.SetFloat(paramName, value);
@@ -174,47 +174,47 @@ public class MecanimEventInspector : Editor {
 	}
 	
 	private void CreateStateMachine() {
+		if (avatarPreview == null || avatarPreview.Animator == null)
+			return;
+		
 		if (controller == null)
 		{
 			controller = new AnimatorController();
 			controller.AddLayer("preview");
-			CreateEvents();
 			controller.hideFlags = HideFlags.DontSave;
-		}
-		
-		if (stateMachine == null)
-		{
-			stateMachine = new StateMachine();
-			stateMachine.hideFlags = HideFlags.DontSave;
-			controller.SetLayerStateMachine(0, this.stateMachine);
-		}
-		
-		if (state == null)
-		{
+			
+			stateMachine = controller.GetLayer(0).stateMachine;
+			CreateParameters();
+			
 			state = stateMachine.AddState("preview");
-			state.SetMotion(0, previewedMotion);
-			state.SetIKOnFeet(avatarPreview.IKOnFeet);
+			state.SetMotion(previewedMotion);
+			state.iKOnFeet = avatarPreview.IKOnFeet;
 			state.hideFlags = HideFlags.DontSave;
+			
+			AnimatorController.SetAnimatorController(avatarPreview.Animator, controller);
 		}
 		
-		AnimatorController.SetAnimatorController(avatarPreview.Animator, controller);
+		if (AnimatorController.GetAnimatorController(avatarPreview.Animator) != this.controller)
+		{
+			AnimatorController.SetAnimatorController(avatarPreview.Animator, this.controller);
+		}
 	}
 	
-	private void CreateEvents()
+	private void CreateParameters()
 	{
-		int eventCount = controller.GetEventCount();
-		for (int i = 0; i < eventCount; i++)
+		int parameterCount = controller.parameterCount;
+		for (int i = 0; i < parameterCount; i++)
 		{
-			controller.RemoveEvent(0);
+			controller.RemoveParameter(0);
 		}
 		
 		if (previewedMotion is BlendTree)
 		{
 			BlendTree blendTree = previewedMotion as BlendTree;
 			
-			for (int j = 0; j < blendTree.GetRecursiveBlendEventCount(); j++)
+			for (int j = 0; j < blendTree.GetRecursiveBlendParamCount(); j++)
 			{
-				controller.AddEvent(blendTree.GetRecursiveBlendEvent(j), AnimatorControllerEventType.Float);
+				controller.AddParameter(blendTree.GetRecursiveBlendParam(j), AnimatorControllerParameterType.Float);
 			}
 		}
 	}
@@ -241,6 +241,11 @@ public class MecanimEventInspector : Editor {
 	
 	private void UpdateAvatarState()
 	{
+		if (Event.current.type != EventType.Repaint)
+		{
+			return;
+		}
+		
 		Animator animator = avatarPreview.Animator;
 		if (animator)
 		{
@@ -374,7 +379,7 @@ public class MecanimEventInspector : Editor {
 			return false;
 		
 		AnimatorController controller = EditorUtility.InstanceIDToObject(controllerId) as AnimatorController;
-		StateMachine sm = controller.GetLayerStateMachine(layer);
+		StateMachine sm = controller.GetLayer(layer).stateMachine;
 		
 		return FindStateRecursively(sm, stateNameHash);
 	}
@@ -395,19 +400,19 @@ public class MecanimEventInspector : Editor {
 		if (controller == null)
 			return false;
 		
-		if (layer >= 0 && layer < controller.GetLayerCount())
+		if (layer >= 0 && layer < controller.layerCount)
 			return true;
 		else
 			return false;
 	}
 	
 	private bool FindStateRecursively(StateMachine stateMachine, int nameHash) {
-		for (int i = 0; i < stateMachine.GetStateCount(); i++) {
-			if (stateMachine.GetState(i).GetUniqueNameHash() == nameHash)
+		for (int i = 0; i < stateMachine.stateCount; i++) {
+			if (stateMachine.GetState(i).uniqueNameHash == nameHash)
 				return true;
 		}
 		
-		for (int i = 0; i < stateMachine.GetStateMachineCount(); i++) {
+		for (int i = 0; i < stateMachine.stateMachineCount; i++) {
 			StateMachine tempSM = stateMachine.GetStateMachine(i);
 			if (FindStateRecursively(tempSM, nameHash))
 				return true;
