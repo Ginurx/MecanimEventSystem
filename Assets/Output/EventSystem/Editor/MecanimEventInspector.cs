@@ -82,6 +82,67 @@ public class MecanimEventInspector : Editor {
 		data[controller][layer][stateNameHash] = new List<MecanimEvent>(events);
 	}
 	
+	public void InsertEventsCopy(AnimatorController controller, int layer, int stateNameHash, MecanimEvent[] events) {
+		
+		List<MecanimEvent> allEvents = new List<MecanimEvent>(GetEvents(controller, layer, stateNameHash));
+		
+		foreach (MecanimEvent e in events) {
+			allEvents.Add(new MecanimEvent(e));
+		}
+		
+		SetEvents(controller, layer, stateNameHash, allEvents.ToArray());
+	}
+	
+	public Dictionary<int, Dictionary<int, MecanimEvent[]>> GetEvents(AnimatorController controller) {
+		try {
+			
+			Dictionary<int, Dictionary<int, MecanimEvent[]>> events = new Dictionary<int, Dictionary<int, MecanimEvent[]>>();
+			
+			foreach(int layer in data[controller].Keys) {
+				
+				events[layer] = new Dictionary<int, MecanimEvent[]>();
+				
+				foreach (int state in data[controller][layer].Keys) {
+					
+					List<MecanimEvent> stateEvents = new List<MecanimEvent>();
+					
+					foreach (MecanimEvent elem in data[controller][layer][state]) {
+						stateEvents.Add(new MecanimEvent(elem));
+					}
+					
+					events[layer][state] = stateEvents.ToArray();
+				}
+			}
+			
+			return events;
+			
+		}
+		catch {
+			return new Dictionary<int, Dictionary<int, MecanimEvent[]>>();
+		}
+	}
+	
+	public void InsertControllerEventsCopy(AnimatorController controller, Dictionary<int, Dictionary<int, MecanimEvent[]>> events) {
+		
+		try {
+			
+			foreach (int layer in events.Keys) {
+				
+				foreach (int state in events[layer].Keys) {
+					
+ 					InsertEventsCopy(controller, layer, state, events[layer][state]);
+					
+				}
+			}
+			
+		}
+		catch {
+			
+		}
+		
+		return;
+	}
+	
 	private Motion previewedMotion;
 	private AvatarPreviewWrapper avatarPreview;
 	private StateMachine stateMachine;
@@ -346,8 +407,7 @@ public class MecanimEventInspector : Editor {
 					if (data[controller][layer][stateNameHash].Count == 0)
 						continue;
 					
-					if (EditorUtility.InstanceIDToObject(controller.GetInstanceID()) == null) {
-						Debug.Log("Controller whose ID " + controller.GetInstanceID() + " is no longer exist when saving data.");
+					if (!IsValidState(controller.GetInstanceID(), layer, stateNameHash)) {
 						continue;
 					}
 					
@@ -371,11 +431,11 @@ public class MecanimEventInspector : Editor {
 		serializedObject.FindProperty("lastEdit").objectReferenceValue = controller;;
 	}
 	
-	private bool ValidateState(int controllerId, int layer, int stateNameHash) {
-		if (!ValidateControllerId(controllerId))
+	private bool IsValidState(int controllerId, int layer, int stateNameHash) {
+		if (!IsValidControllerId(controllerId))
 			return false;
 		
-		if (!ValidateLayer(controllerId, layer))
+		if (!IsValidLayer(controllerId, layer))
 			return false;
 		
 		AnimatorController controller = EditorUtility.InstanceIDToObject(controllerId) as AnimatorController;
@@ -385,7 +445,7 @@ public class MecanimEventInspector : Editor {
 	}
 	
 		
-	private bool ValidateControllerId(int controllerId) {
+	private bool IsValidControllerId(int controllerId) {
 		AnimatorController controller = EditorUtility.InstanceIDToObject(controllerId) as AnimatorController;
 		
 		if (controller == null)
@@ -394,7 +454,7 @@ public class MecanimEventInspector : Editor {
 		return true;
 	}
 	
-	private bool ValidateLayer(int controllerId, int layer) {
+	private bool IsValidLayer(int controllerId, int layer) {
 		AnimatorController controller = EditorUtility.InstanceIDToObject(controllerId) as AnimatorController;
 		
 		if (controller == null)

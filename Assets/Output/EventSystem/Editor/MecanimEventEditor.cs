@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEditor;
 using UnityEditorInternal;
@@ -18,6 +17,8 @@ public class MecanimEventEditor : EditorWindow {
 	}
 	
 	public static MecanimEvent clipboard;
+	public static MecanimEvent[] stateClipboard;
+	public static Dictionary<int, Dictionary<int, MecanimEvent[]>> controllerClipboard;
 	
 	private AnimatorController targetController;
 	private StateMachine targetStateMachine;
@@ -337,6 +338,65 @@ public class MecanimEventEditor : EditorWindow {
 			GUILayout.FlexibleSpace();
 			
 			GUILayout.BeginHorizontal(); {
+				
+                if (GUILayout.Button("Tools")) {
+					GenericMenu menu = new GenericMenu();
+					
+					GenericMenu.MenuFunction2 callback = delegate(object obj) {
+						int id = (int)obj;
+						
+						switch(id)
+						{
+							case 1:
+							{
+								stateClipboard = eventInspector.GetEvents(targetController, selectedLayer, targetState.uniqueNameHash);
+								break;
+							}
+								
+							case 2:
+							{
+								eventInspector.InsertEventsCopy(targetController, selectedLayer, targetState.uniqueNameHash, stateClipboard);
+								break;
+							}
+								
+							case 3:
+							{
+								controllerClipboard = eventInspector.GetEvents(targetController);
+								break;
+							}
+							
+							case 4:
+							{
+								eventInspector.InsertControllerEventsCopy(targetController, controllerClipboard);
+								break;
+							}
+						}
+					};
+					
+					if (targetState == null)
+						menu.AddDisabledItem(new GUIContent("Copy All Events From Selected State"));
+					else
+						menu.AddItem(new GUIContent("Copy All Events From Selected State"), false, callback, 1);
+					
+					if (targetState == null || stateClipboard == null || stateClipboard.Length == 0)
+						menu.AddDisabledItem(new GUIContent("Paste All Events To Selected State"));
+					else
+						menu.AddItem(new GUIContent("Paste All Events To Selected State"), false, callback, 2);
+					
+					if (targetController == null)
+						menu.AddDisabledItem(new GUIContent("Copy All Events From Selected Controller"));
+					else
+						menu.AddItem(new GUIContent("Copy All Events From Selected Controller"), false, callback, 3);
+					
+					if (targetController == null || controllerClipboard == null || controllerClipboard.Count == 0)
+						menu.AddDisabledItem(new GUIContent("Paste All Events To Selected Controller"));
+					else
+						menu.AddItem(new GUIContent("Paste All Events To Selected Controller"), false, callback, 4);
+					
+					
+					
+					menu.ShowAsContext();
+				}
 				
 				GUILayout.FlexibleSpace();
 				
