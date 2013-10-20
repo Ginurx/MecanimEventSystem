@@ -180,6 +180,8 @@ public class MecanimEventEditor : EditorWindow {
 	
 	Vector2 layerPanelScrollPos;
 	int selectedLayer = 0;
+
+	AnimatorControllerLayer[] layers;
 	
 	void DrawLayerPanel() {
 		
@@ -189,20 +191,27 @@ public class MecanimEventEditor : EditorWindow {
 		
 			int layerCount = targetController.layerCount;	
 			GUILayout.Label(layerCount + " layer(s) in selected controller");
-			
+
+			if (Event.current.type == EventType.Layout) {
+				layers = new AnimatorControllerLayer[layerCount];
+				for (int layer = 0; layer < layerCount; layer++) {
+					layers[layer] = targetController.GetLayer(layer);
+				}
+			}
+
 			GUILayout.BeginVertical("Box");
 			layerPanelScrollPos = GUILayout.BeginScrollView(layerPanelScrollPos);
 			
 			string[] layerNames = new string[layerCount];
 			
 			for (int layer = 0; layer < layerCount; layer++) {
-				layerNames[layer] = "[" + layer.ToString() + "]" + targetController.GetLayer(layer).name;
+				layerNames[layer] = "[" + layer.ToString() + "]" + layers[layer].name;
 			}
 			
 			selectedLayer = GUILayout.SelectionGrid(selectedLayer, layerNames, 1);
 			
 			if (selectedLayer >= 0 && selectedLayer < layerCount) {
-				targetStateMachine = targetController.GetLayer(selectedLayer).stateMachine;
+				targetStateMachine = layers[selectedLayer].stateMachine;
 			}
 			else {
 				targetStateMachine = null;
@@ -281,7 +290,7 @@ public class MecanimEventEditor : EditorWindow {
 			List<string> eventNames = new List<string>();
 			
 			foreach (MecanimEvent e in displayEvents) {
-				eventNames.Add(string.Format("{0}({1})@{2}", e.functionName, e.parameter, e.normalizedTime.ToString("0.0000")));
+				eventNames.Add(string.Format("{3}{0}({1})@{2}", e.functionName, e.parameter, e.normalizedTime.ToString("0.0000"), e.isEnable?"":"[DISABLED]"));
 			}
 			
 			GUILayout.BeginVertical("Box");

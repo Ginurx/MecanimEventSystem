@@ -1,0 +1,9 @@
+Introduce of MecanimEventEmitterWithData
+
+MecanimEventEmitterWithData reads data from its data field in inspector.
+While MecanimEventEmitter reads global data which was configured by a gameobject attached MecanimEventSetupHelper.
+
+With the help of MecanimEventEmitterWithData you can create event data node for each emitter 
+so that a character can be packed with its controller and event data into one bundle.
+
+

@@ -255,7 +255,7 @@ public class MecanimEventInspector : Editor {
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, controller);
 		}
 		
-		if (AnimatorController.GetAnimatorController(avatarPreview.Animator) != this.controller)
+		if (AnimatorController.GetEffectiveAnimatorController(avatarPreview.Animator) != this.controller)
 		{
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, this.controller);
 		}
@@ -396,7 +396,7 @@ public class MecanimEventInspector : Editor {
 	public void SaveData() {
 		
 		MecanimEventData targetData = target as MecanimEventData;
-		Undo.RegisterUndo(target, "Mecanim Event Data");
+		Undo.RecordObject(target, "Mecanim Event Data");
 		
 		List<MecanimEventDataEntry> entries = new List<MecanimEventDataEntry>();
 

@@ -241,7 +241,7 @@ public class MecanimEventDataTransfer : EditorWindow {
 	
 	void DeleteEntry(UnityEngine.Object controller) {
 	
-		Undo.RegisterUndo(transferTo, "Mecanim Event Data");
+		Undo.RecordObject(transferTo, "Mecanim Event Data");
 		
 		if (transferTo.data == null)
 			transferTo.data = new MecanimEventDataEntry[0];

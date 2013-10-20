@@ -45,44 +45,49 @@ public class MecanimEventEditorPopup : EditorWindow {
 	}
 	
 	void OnGUI() {
-		EditorGUILayout.BeginHorizontal();
-		eventTemp.normalizedTime = Mathf.Clamp(EditorGUILayout.FloatField("Normalized Time", eventTemp.normalizedTime), 0.0f, 1.0f);
+		EditorGUI.BeginDisabledGroup(!eventTemp.isEnable); {
+
+			EditorGUILayout.BeginHorizontal();
+			eventTemp.normalizedTime = Mathf.Clamp(EditorGUILayout.FloatField("Normalized Time", eventTemp.normalizedTime), 0.0f, 1.0f);
+			
+			if (GUILayout.Button("Current", GUILayout.MaxWidth(60))) {
+				eventTemp.normalizedTime = editor.PlaybackTime;
+			}
+			
+			EditorGUILayout.EndHorizontal();
+			
+			eventTemp.functionName = EditorGUILayout.TextField("Message", eventTemp.functionName);
+			eventTemp.paramType = (MecanimEventParamTypes)EditorGUILayout.EnumPopup("Parameter Type", eventTemp.paramType);
+			
+			switch(eventTemp.paramType) {
+			case MecanimEventParamTypes.Int32:
+				eventTemp.intParam = EditorGUILayout.IntField("Parameter", eventTemp.intParam);
+				break;
+			case MecanimEventParamTypes.Float:
+				eventTemp.floatParam = EditorGUILayout.FloatField("Parameter", eventTemp.floatParam);
+				break;
+			case MecanimEventParamTypes.String:
+				eventTemp.stringParam = EditorGUILayout.TextField("Parameter", eventTemp.stringParam);
+				break;
+			case MecanimEventParamTypes.Boolean:
+				eventTemp.boolParam = EditorGUILayout.Popup(new GUIContent("Parameter"), eventTemp.boolParam == true ? 1 : 0, booleanPopup) == 1 ? true : false;
+				break;
+			}
+			
+			GUIContent toggleLabel = new GUIContent("Critical", "A critical event won't be missed even state was interrupted.");
+			eventTemp.critical = EditorGUILayout.Toggle(toggleLabel, eventTemp.critical);
+			
+			if (availableParameters.Length > 0)
+				conditionList.DoList();
+			else
+				eventTemp.condition.conditions.Clear();
+			
+			GUILayout.Space(10);
+			GUILayout.FlexibleSpace();
 		
-		if (GUILayout.Button("Current", GUILayout.MaxWidth(60))) {
-			eventTemp.normalizedTime = editor.PlaybackTime;
 		}
-		
-		EditorGUILayout.EndHorizontal();
-		
-		eventTemp.functionName = EditorGUILayout.TextField("Message", eventTemp.functionName);
-		eventTemp.paramType = (MecanimEventParamTypes)EditorGUILayout.EnumPopup("Parameter Type", eventTemp.paramType);
-		
-		switch(eventTemp.paramType) {
-		case MecanimEventParamTypes.Int32:
-			eventTemp.intParam = EditorGUILayout.IntField("Parameter", eventTemp.intParam);
-			break;
-		case MecanimEventParamTypes.Float:
-			eventTemp.floatParam = EditorGUILayout.FloatField("Parameter", eventTemp.floatParam);
-			break;
-		case MecanimEventParamTypes.String:
-			eventTemp.stringParam = EditorGUILayout.TextField("Parameter", eventTemp.stringParam);
-			break;
-		case MecanimEventParamTypes.Boolean:
-			eventTemp.boolParam = EditorGUILayout.Popup(new GUIContent("Parameter"), eventTemp.boolParam == true ? 1 : 0, booleanPopup) == 1 ? true : false;
-			break;
-		}
-		
-		GUIContent toggleLabel = new GUIContent("Critical", "A critical event won't be missed even state was interrupted.");
-		eventTemp.critical = EditorGUILayout.Toggle(toggleLabel, eventTemp.critical);
-		
-		if (availableParameters.Length > 0)
-			conditionList.DoList();
-		else
-			eventTemp.condition.conditions.Clear();
-		
-		GUILayout.Space(10);
-		GUILayout.FlexibleSpace();
-		
+		EditorGUI.EndDisabledGroup();
+
 		GUILayout.BeginHorizontal();
 		
 		if (GUILayout.Button("Copy", GUILayout.MinWidth(60))) {
@@ -96,6 +101,10 @@ public class MecanimEventEditorPopup : EditorWindow {
 		}
 		
 		EditorGUI.EndDisabledGroup();
+
+		if (GUILayout.Button(eventTemp.isEnable?"Disable":"Enable")) {
+			eventTemp.isEnable = !eventTemp.isEnable;
+		}
 		
 		GUILayout.FlexibleSpace();
 		GUILayout.Space(20);
@@ -110,6 +119,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 			eventEditing.boolParam = eventTemp.boolParam;
 			eventEditing.condition = eventTemp.condition;
 			eventEditing.critical = eventTemp.critical;
+			eventEditing.isEnable = eventTemp.isEnable;
 			Close();
 		}
 		

@@ -3,16 +3,18 @@ using UnityEditor;
 using UnityEditorInternal;
 using System.Collections.Generic;
 
-[CustomEditor(typeof(MecanimEventEmitter))]
-public class MecanimEventEmitterInspector : Editor {
+[CustomEditor(typeof(MecanimEventEmitterWithData))]
+public class MecanimEventEmitterWithDataInspector : Editor {
 	SerializedProperty controller;
 	SerializedProperty animator;
 	SerializedProperty emitType;
+	SerializedProperty data;
 	
 	void OnEnable() {
 		controller = serializedObject.FindProperty("animatorController");
 		animator = serializedObject.FindProperty("animator");
 		emitType = serializedObject.FindProperty("emitType");
+		data = serializedObject.FindProperty("data");
 	}
 	
 	public override void OnInspectorGUI ()
@@ -32,6 +34,8 @@ public class MecanimEventEmitterInspector : Editor {
 		EditorGUILayout.ObjectField("AnimatorController", controller.objectReferenceValue, typeof(AnimatorController), false);
 		
 		EditorGUILayout.PropertyField(emitType);
+		
+		EditorGUILayout.PropertyField(data);
 
 		serializedObject.ApplyModifiedProperties();
 	}

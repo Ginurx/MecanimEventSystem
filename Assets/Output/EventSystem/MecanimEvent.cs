@@ -56,6 +56,8 @@ public class MecanimEvent {
 		condition.conditions = new List<EventConditionEntry>(other.condition.conditions);
 		
 		critical = other.critical;
+
+		isEnable = other.isEnable;
 	}
 	
 	public string functionName;
@@ -86,7 +88,9 @@ public class MecanimEvent {
 	
 	public EventCondition condition;
 	public bool critical = false;
-	
+
+	public bool isEnable = true;
+
 	private EventContext context;
 	
 	public void SetContext(EventContext context)

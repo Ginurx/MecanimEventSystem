@@ -1,3 +1,8 @@
+ver 2.6
+*MecanimEventEmitterWithData included.
+*Enable/Disable an event.
+*Editor performance improved. thx to the patch from tmcsweeney
+
 Ver2.5.1
 *Event context. Added a static member - Context - to  MecanimEvent class.
 
