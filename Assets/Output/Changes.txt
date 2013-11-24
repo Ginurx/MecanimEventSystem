@@ -1,7 +1,15 @@
-ver 2.6
+ver 2.6.5
+*Unity4.3 supported
 *MecanimEventEmitterWithData included.
 *Enable/Disable an event.
-*Editor performance improved. thx to the patch from tmcsweeney
+*Editor performance improved. thx to tmcsweeney.
+
+Ver2.6.1
+*Copy & paste all events of a controller or a state.
+
+Ver2.6
+*Revised to be compatible with Unity4.2. 
+(Unity 4.2 or higher required)
 
 Ver2.5.1
 *Event context. Added a static member - Context - to  MecanimEvent class.
