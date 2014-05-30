@@ -1,4 +1,7 @@
-ver 2.6.5
+Ver 2.6.6
+*Unity4.5 compatible
+
+Ver 2.6.5
 *Unity4.3 supported
 *MecanimEventEmitterWithData included.
 *Enable/Disable an event.

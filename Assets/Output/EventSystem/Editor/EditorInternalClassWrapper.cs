@@ -259,9 +259,9 @@ public class ReorderableListWrapper {
 	private static FieldInfo field_footerHeight;
 	private static FieldInfo field_headerHeight;
 	
-	private static PropertyInfo property_Count;
+	private static PropertyInfo property_count;
 	
-	private static MethodInfo method_DoList;
+	private static MethodInfo method_DoLayoutList;
 	
 	
 	private object instance;
@@ -289,7 +289,7 @@ public class ReorderableListWrapper {
 	public static void InitType() {
 		if (realType == null) {
 			Assembly assembly = Assembly.GetAssembly(typeof(Editor));
-			realType = assembly.GetType("UnityEditor.ReorderableList");
+			realType = assembly.GetType("UnityEditorInternal.ReorderableList");
 			
 			method_ctor = realType.GetConstructor(new Type[] { typeof(IList), typeof(Type)});
 			
@@ -305,9 +305,9 @@ public class ReorderableListWrapper {
 			field_footerHeight = realType.GetField("footerHeight");
 			field_headerHeight = realType.GetField("headerHeight");
 			
-			property_Count = realType.GetProperty("Count");
+			property_count = realType.GetProperty("count");
 			
-			method_DoList = realType.GetMethod("DoList");
+			method_DoLayoutList = realType.GetMethod("DoLayoutList");
 		}
 	}
 	
@@ -371,14 +371,14 @@ public class ReorderableListWrapper {
 		}
 	}
 	
-	public int Count {
+	public int count {
 		get {
-			return (int)property_Count.GetValue(instance, null);
+			return (int)property_count.GetValue(instance, null);
 		}
 	}
 	
-	public void DoList() {
-		method_DoList.Invoke(instance, null);
+	public void DoLayoutList() {
+		method_DoLayoutList.Invoke(instance, null);
 	}
 }
 

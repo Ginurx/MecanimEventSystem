@@ -41,7 +41,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 	}
 	
 	void Update() {
-		minSize = new Vector2(minSize.x, 160 + conditionList.Count * conditionList.elementHeight);
+		minSize = new Vector2(minSize.x, 160 + conditionList.count * conditionList.elementHeight);
 	}
 	
 	void OnGUI() {
@@ -78,7 +78,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 			eventTemp.critical = EditorGUILayout.Toggle(toggleLabel, eventTemp.critical);
 			
 			if (availableParameters.Length > 0)
-				conditionList.DoList();
+				conditionList.DoLayoutList();
 			else
 				eventTemp.condition.conditions.Clear();
 			
