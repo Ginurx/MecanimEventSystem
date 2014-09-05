@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using UnityEditorInternal;
+using UnityEditor.Animations;
 using System.Collections.Generic;
 
 
@@ -20,6 +20,10 @@ public class MecanimEventInspector : Editor {
 		MecanimEventEditor.eventInspector = null;
 		
 		OnPreviewDisable();
+	}
+
+	void OnDestroy() {
+		OnPreviewDestroy();
 	}
 	
 	public override void OnInspectorGUI ()
@@ -145,12 +149,12 @@ public class MecanimEventInspector : Editor {
 	
 	private Motion previewedMotion;
 	private AvatarPreviewWrapper avatarPreview;
-	private StateMachine stateMachine;
-	private State state;
+	private AnimatorStateMachine stateMachine;
+	private AnimatorState state;
 	private AnimatorController controller;
+	private bool controllerIsDitry;
 	
 	private bool PrevIKOnFeet = false;
-	//
 	
 	public void SetPreviewMotion(Motion motion) {
 		if (previewedMotion == motion)
@@ -169,7 +173,7 @@ public class MecanimEventInspector : Editor {
 		
 		if (motion != null)
 			CreateStateMachine();
-		
+
 		Repaint();
 	}
 	
@@ -200,7 +204,6 @@ public class MecanimEventInspector : Editor {
 	
 	public override bool HasPreviewGUI ()
 	{
-		//return previewedMotion != null;
 		return true;
 	}
 	
@@ -214,7 +217,7 @@ public class MecanimEventInspector : Editor {
 	{
 		if (avatarPreview == null || previewedMotion == null)
 			return;
-		
+
 		UpdateAvatarState();
 		avatarPreview.DoAvatarPreview(r, background);
 	}
@@ -222,6 +225,14 @@ public class MecanimEventInspector : Editor {
 	private void OnPreviewDisable() {
 		previewedMotion = null;
 		
+		ClearStateMachine();
+		if (avatarPreview != null) {
+			avatarPreview.OnDestroy();
+			avatarPreview = null;
+		}
+	}
+
+	private void OnPreviewDestroy() {
 		ClearStateMachine();
 		if (avatarPreview != null) {
 			avatarPreview.OnDestroy();
@@ -241,21 +252,25 @@ public class MecanimEventInspector : Editor {
 		if (controller == null)
 		{
 			controller = new AnimatorController();
-			controller.AddLayer("preview");
 			controller.hideFlags = HideFlags.DontSave;
-			
-			stateMachine = controller.GetLayer(0).stateMachine;
+			controller.AddLayer("preview");
+			stateMachine = controller.layers[0].stateMachine;
+
 			CreateParameters();
-			
 			state = stateMachine.AddState("preview");
-			state.SetMotion(previewedMotion);
-			state.iKOnFeet = avatarPreview.IKOnFeet;
+			state.motion = previewedMotion;
+			state.iKOnFeet = this.avatarPreview.IKOnFeet;
 			state.hideFlags = HideFlags.DontSave;
-			
+			stateMachine.hideFlags = HideFlags.DontSave;
+
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, controller);
+
+			controller.AppendOnAnimatorControllerDirtyCallback(this.ControllerDitry);
+
+			controllerIsDitry = false;
 		}
 		
-		if (AnimatorController.GetEffectiveAnimatorController(avatarPreview.Animator) != this.controller)
+		if (AnimatorControllerExtension.GetEffectiveAnimatorController(avatarPreview.Animator) != this.controller)
 		{
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, this.controller);
 		}
@@ -263,12 +278,6 @@ public class MecanimEventInspector : Editor {
 	
 	private void CreateParameters()
 	{
-		int parameterCount = controller.parameterCount;
-		for (int i = 0; i < parameterCount; i++)
-		{
-			controller.RemoveParameter(0);
-		}
-		
 		if (previewedMotion is BlendTree)
 		{
 			BlendTree blendTree = previewedMotion as BlendTree;
@@ -286,8 +295,14 @@ public class MecanimEventInspector : Editor {
 		{
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, null);
 		}
+
+		if (this.controller != null)
+		{
+			controller.RemoveOnAnimatorControllerDirtyCallback(this.ControllerDitry);
+		}
+
 		Object.DestroyImmediate(this.controller);
-		Object.DestroyImmediate(this.stateMachine);
+		//Object.DestroyImmediate(this.stateMachine);
 		Object.DestroyImmediate(this.state);
 		stateMachine = null;
 		controller = null;
@@ -298,6 +313,11 @@ public class MecanimEventInspector : Editor {
 	{
 		ClearStateMachine();
 		CreateStateMachine();
+	}
+
+	private void ControllerDitry()
+	{
+		this.controllerIsDitry = true;
 	}
 	
 	private void UpdateAvatarState()
@@ -310,6 +330,12 @@ public class MecanimEventInspector : Editor {
 		Animator animator = avatarPreview.Animator;
 		if (animator)
 		{
+			if (controllerIsDitry)
+			{
+				avatarPreview.ResetPreviewInstance();
+				ResetStateMachine();
+			}
+
 			if (PrevIKOnFeet != avatarPreview.IKOnFeet)
 			{
 				PrevIKOnFeet = avatarPreview.IKOnFeet;
@@ -322,7 +348,23 @@ public class MecanimEventInspector : Editor {
 				avatarPreview.Animator.rootRotation = rootRotation;
 			}
 
+//			if (avatarPreview.Animator != null)
+//			{
+//				BlendTree blendTree = previewedMotion as BlendTree;
+//
+//				if (blendTree != null)
+//				{
+//					for (int i = 0; i < blendTree.GetRecursiveBlendParamCount(); i++)
+//					{
+//						string recurvieBlendParameter = blendTree.GetRecursiveBlendParam(i);
+//						float inputBlendValue = blendTree.GetInputBlendVal(recurvieBlendParameter);
+//						avatarPreview.Animator.SetFloat(recurvieBlendParameter, inputBlendValue);
+//					}
+//				}
+//			}
+
 			avatarPreview.timeControl.loop = true;
+
 			float num = 1f;
 			float num2 = 0f;
 			if (animator.layerCount > 0)
@@ -337,6 +379,9 @@ public class MecanimEventInspector : Editor {
 			avatarPreview.timeControl.Update();
 			
 			float num3 = this.avatarPreview.timeControl.deltaTime;
+			if (float.IsInfinity(num3))
+				num3 = 0;
+
 			if (!previewedMotion.isLooping)
 			{
 				if (num2 >= 1f)
@@ -351,6 +396,7 @@ public class MecanimEventInspector : Editor {
 					}
 				}
 			}
+
 			animator.UpdateWrapper(num3);
 		}
 	}
@@ -439,7 +485,7 @@ public class MecanimEventInspector : Editor {
 			return false;
 		
 		AnimatorController controller = EditorUtility.InstanceIDToObject(controllerId) as AnimatorController;
-		StateMachine sm = controller.GetLayer(layer).stateMachine;
+		AnimatorStateMachine sm = controller.layers[layer].stateMachine;
 		
 		return FindStateRecursively(sm, stateNameHash);
 	}
@@ -460,24 +506,26 @@ public class MecanimEventInspector : Editor {
 		if (controller == null)
 			return false;
 		
-		if (layer >= 0 && layer < controller.layerCount)
+		if (layer >= 0 && layer < controller.layers.Length)
 			return true;
 		else
 			return false;
 	}
 	
-	private bool FindStateRecursively(StateMachine stateMachine, int nameHash) {
-		for (int i = 0; i < stateMachine.stateCount; i++) {
-			if (stateMachine.GetState(i).uniqueNameHash == nameHash)
+	private bool FindStateRecursively(AnimatorStateMachine stateMachine, int nameHash) {
+
+		foreach (ChildAnimatorState childState in stateMachine.states) {
+			if (childState.state.GetFullPathHash(stateMachine) == nameHash)
+			{
+				return true;
+			}
+		}
+
+		foreach (ChildAnimatorStateMachine childStateMachine in stateMachine.stateMachines) {
+			if (FindStateRecursively(childStateMachine.stateMachine, nameHash))
 				return true;
 		}
-		
-		for (int i = 0; i < stateMachine.stateMachineCount; i++) {
-			StateMachine tempSM = stateMachine.GetStateMachine(i);
-			if (FindStateRecursively(tempSM, nameHash))
-				return true;
-		}
-		
+
 		return false;
 	}
 }

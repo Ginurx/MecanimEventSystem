@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using UnityEditorInternal;
+using UnityEditor.Animations;
 using System.Collections.Generic;
 
 public class MecanimEventEditor : EditorWindow {
@@ -21,8 +21,8 @@ public class MecanimEventEditor : EditorWindow {
 	public static Dictionary<int, Dictionary<int, MecanimEvent[]>> controllerClipboard;
 	
 	private AnimatorController targetController;
-	private StateMachine targetStateMachine;
-	private State targetState;
+	private AnimatorStateMachine targetStateMachine;
+	private AnimatorState targetState;
 	private MecanimEvent targetEvent;
 	
 	private List<MecanimEvent> displayEvents;
@@ -84,10 +84,7 @@ public class MecanimEventEditor : EditorWindow {
 	public KeyValuePair<string, EventConditionParamTypes>[] GetConditionParameters() {
 		List<KeyValuePair<string, EventConditionParamTypes>> ret = new List<KeyValuePair<string, EventConditionParamTypes>>();
 		if (targetController != null) {
-			for (int i = 0; i < targetController.parameterCount; i++) {
-				
-				AnimatorControllerParameter animatorParam = targetController.GetParameter(i);
-				
+			foreach (AnimatorControllerParameter animatorParam in targetController.parameters) {
 				switch(animatorParam.type) {
 				case AnimatorControllerParameterType.Float:		// float
 					ret.Add(new KeyValuePair<string, EventConditionParamTypes>(animatorParam.name, EventConditionParamTypes.Float));
@@ -107,7 +104,9 @@ public class MecanimEventEditor : EditorWindow {
 	
 	private void SaveState() {
 		if (targetController != null && targetState != null)
-			eventInspector.SetEvents(targetController, selectedLayer, targetState.uniqueNameHash, displayEvents.ToArray());
+		{
+			eventInspector.SetEvents(targetController, selectedLayer, targetState.GetFullPathHash(targetStateMachine), displayEvents.ToArray());
+		}
 	}
 	
 	Vector2 controllerPanelScrollPos;
@@ -189,14 +188,11 @@ public class MecanimEventEditor : EditorWindow {
 		
 		if (targetController != null) {
 		
-			int layerCount = targetController.layerCount;	
+			int layerCount = targetController.layers.Length;	
 			GUILayout.Label(layerCount + " layer(s) in selected controller");
 
-			if (Event.current.type == EventType.Layout) {
-				layers = new AnimatorControllerLayer[layerCount];
-				for (int layer = 0; layer < layerCount; layer++) {
-					layers[layer] = targetController.GetLayer(layer);
-				}
+			if (Event.current.type == EventType.Layout || layers == null) {
+				layers = targetController.layers;
 			}
 
 			GUILayout.BeginVertical("Box");
@@ -239,11 +235,11 @@ public class MecanimEventEditor : EditorWindow {
 		
 		if (targetStateMachine != null) {
 			
-			List<State> availableStates = GetStatesRecursive(targetStateMachine);
+			List<AnimatorState> availableStates = GetStatesRecursive(targetStateMachine);
 			List<string> stateNames = new List<string>();
 			
-			foreach (State s in availableStates) {
-				stateNames.Add(s.uniqueName);
+			foreach (AnimatorState s in availableStates) {
+				stateNames.Add(s.name);
 			}
 			
 			GUILayout.Label(availableStates.Count + " state(s) in selected layer.");
@@ -281,8 +277,8 @@ public class MecanimEventEditor : EditorWindow {
 		GUILayout.BeginVertical();
 		
 		if (targetState != null) {
-			
-			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController, selectedLayer, targetState.uniqueNameHash));
+
+			displayEvents = new List<MecanimEvent>(eventInspector.GetEvents(targetController, selectedLayer, targetState.GetFullPathHash(targetStateMachine)));
 			SortEvents();
 			
 			GUILayout.Label(displayEvents.Count + " event(s) in this state.");
@@ -358,13 +354,13 @@ public class MecanimEventEditor : EditorWindow {
 						{
 							case 1:
 							{
-								stateClipboard = eventInspector.GetEvents(targetController, selectedLayer, targetState.uniqueNameHash);
+								stateClipboard = eventInspector.GetEvents(targetController, selectedLayer, targetState.GetFullPathHash(targetStateMachine));
 								break;
 							}
 								
 							case 2:
 							{
-								eventInspector.InsertEventsCopy(targetController, selectedLayer, targetState.uniqueNameHash, stateClipboard);
+								eventInspector.InsertEventsCopy(targetController, selectedLayer, targetState.GetFullPathHash(targetStateMachine), stateClipboard);
 								break;
 							}
 								
@@ -507,9 +503,9 @@ public class MecanimEventEditor : EditorWindow {
 			
 		}
 		GUILayout.EndHorizontal();
-		
-		if (targetState != null && targetState.GetMotion() != null) {
-			eventInspector.SetPreviewMotion(targetState.GetMotion());
+
+		if (targetState != null && targetState.motion != null) {
+			eventInspector.SetPreviewMotion(targetState.motion);
 		}
 		else {
 			eventInspector.SetPreviewMotion(null);
@@ -518,8 +514,6 @@ public class MecanimEventEditor : EditorWindow {
 		GUILayout.Space(5);
 		
 		GUILayout.BeginHorizontal(GUILayout.MaxHeight(100)); {
-			
-			
 			
 			DrawTimelinePanel();
 			
@@ -720,24 +714,31 @@ public class MecanimEventEditor : EditorWindow {
 		}
 	}
 	
-	private State[] GetStates(StateMachine sm)
+	private List<AnimatorState> GetStates(AnimatorStateMachine sm)
 	{
-		State[] array = new State[sm.stateCount];
-		for (int i = 0; i < sm.stateCount; i++)
-		{
-			array[i] = sm.GetState(i);
+		List<AnimatorState> stateArray = new List<AnimatorState>();
+		foreach (ChildAnimatorState childState in sm.states) {
+			stateArray.Add(childState.state);
 		}
-		return array;
+
+		return stateArray;
 	}
 	
-	private List<State> GetStatesRecursive(StateMachine sm)
+	private List<AnimatorState> GetStatesRecursive(AnimatorStateMachine sm)
 	{
-		List<State> list = new List<State>();
+		List<AnimatorState> list = new List<AnimatorState>();
 		list.AddRange(GetStates(sm));
-		for (int i = 0; i < sm.stateMachineCount; i++)
-		{
-			list.AddRange(GetStatesRecursive(sm.GetStateMachine(i)));
+
+		foreach (ChildAnimatorStateMachine childStateMachine in sm.stateMachines) {
+			list.AddRange(GetStatesRecursive(childStateMachine.stateMachine));
 		}
+
 		return list;
+	}
+
+	private int GetStateFullPathHash(AnimatorController controller, int layer, AnimatorState state)
+	{
+		string fullpath = controller.layers[layer].stateMachine.GetStatePathWrapper(state);
+		return Animator.StringToHash(fullpath);
 	}
 }

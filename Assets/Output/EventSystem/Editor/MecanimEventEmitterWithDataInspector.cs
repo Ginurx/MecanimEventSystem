@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditorInternal;
 using System.Collections.Generic;
 
@@ -24,7 +25,7 @@ public class MecanimEventEmitterWithDataInspector : Editor {
 		EditorGUILayout.PropertyField(animator);
 		
 		if (animator.objectReferenceValue != null) {
-			AnimatorController animatorController = AnimatorController.GetEffectiveAnimatorController((Animator)animator.objectReferenceValue);
+			AnimatorController animatorController = AnimatorControllerExtension.GetEffectiveAnimatorController((Animator)animator.objectReferenceValue);
 			controller.objectReferenceValue = animatorController;
 		}
 		else {

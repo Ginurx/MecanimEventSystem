@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
-using UnityEditorInternal;
+//using UnityEditorInternal;
+using UnityEditor.Animations;
 using System.Collections;
 using System;
 using System.Reflection;
@@ -18,6 +19,9 @@ public class AvatarPreviewWrapper {
 	private static MethodInfo method_DoPreviewSettings;
 	private static MethodInfo method_OnDestroy;
 	private static MethodInfo method_DoAvatarPreview;
+	private static MethodInfo method_ResetPreviewInstance;
+
+//	private static MethodInfo method_CalculatePreviewGameObject;
 	private static FieldInfo field_timeControl;
 	
 	
@@ -33,6 +37,8 @@ public class AvatarPreviewWrapper {
 			method_DoPreviewSettings		= realType.GetMethod("DoPreviewSettings");
 			method_OnDestroy				= realType.GetMethod("OnDestroy");
 			method_DoAvatarPreview			= realType.GetMethod("DoAvatarPreview", new Type[] {typeof(Rect), typeof(GUIStyle)});
+			method_ResetPreviewInstance 	= realType.GetMethod("ResetPreviewInstance");
+//			method_CalculatePreviewGameObject = realType.GetMethod("CalculatePreviewGameObject", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
 			field_timeControl				= realType.GetField("timeControl");
 		}
 	}
@@ -81,6 +87,15 @@ public class AvatarPreviewWrapper {
 	public void DoAvatarPreview(Rect rect, GUIStyle background) {
 		method_DoAvatarPreview.Invoke(instance, new object[] { rect, background });
 	}
+
+	public void ResetPreviewInstance() {
+		method_ResetPreviewInstance.Invoke(instance, null);
+	}
+
+//	public static GameObject CalculatePreviewGameobject (Animator selectedAnimator, Motion motion, ModelImporterAnimationType animationType) {
+//		InitType();
+//		return (GameObject)method_CalculatePreviewGameObject.Invoke(null, new object[] { selectedAnimator, motion, animationType });
+//	}
 	
 	public TimeControlWrapper timeControl {
 		get {
@@ -400,14 +415,76 @@ public static class BlendTreeExtension {
 		object val = bt.GetType().GetMethod("GetRecursiveBlendParameterMin", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Invoke(bt, new object[]{index});
 		return (float)val;
 	}
-	
+	public static float GetInputBlendVal(this BlendTree bt, string blendValueName) {
+		object val = bt.GetType().GetMethod("GetInputBlendValue", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Invoke(bt, new object[] { blendValueName });
+		return (float)val;
+	}
 }
 
-public static class StateExtension {
-	
-	public static void SetMotion(this State state, Motion motion) {
-		state.GetType().GetMethod("SetMotionInternal", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new System.Type[] {typeof(Motion)}, null).Invoke(state, new object[] {motion});
+public static class AnimatorControllerExtension {
+
+	private static Type realType;
+	private static MethodInfo method_GetEffectiveAnimatorController;
+	private static FieldInfo field_OnAnimatorControllerDirty;
+
+	public static void InitType() {
+		if (realType == null) {
+			realType = typeof(AnimatorController);
+
+			method_GetEffectiveAnimatorController = realType.GetMethod("GetEffectiveAnimatorController", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+			field_OnAnimatorControllerDirty = realType.GetField("OnAnimatorControllerDirty", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+		}
 	}
-	
+
+	public static AnimatorController GetEffectiveAnimatorController(Animator animator) {
+		InitType();
+		object val = (AnimatorController)(method_GetEffectiveAnimatorController.Invoke(null, new object[] { animator }));
+		return (AnimatorController)val;
+	}
+
+	public static void AppendOnAnimatorControllerDirtyCallback(this AnimatorController controller, System.Action callback) {
+		InitType();
+		System.Action oldCallback = (System.Action)field_OnAnimatorControllerDirty.GetValue(controller);
+		System.Action newCallback = (System.Action)Delegate.Combine(oldCallback, new System.Action(callback));
+
+		field_OnAnimatorControllerDirty.SetValue(controller, newCallback);
+	}
+
+	public static void RemoveOnAnimatorControllerDirtyCallback(this AnimatorController controller, System.Action callback) {
+		InitType();
+		System.Action oldCallback = (System.Action)field_OnAnimatorControllerDirty.GetValue(controller);
+		System.Action newCallback = (System.Action)Delegate.Remove(oldCallback, new System.Action(callback));
+
+		field_OnAnimatorControllerDirty.SetValue(controller, newCallback);
+	}
 }
-	
+
+public static class AnimatorStateMachineExtension {
+
+	private static Type realType;
+	private static MethodInfo method_GetStatePath;
+
+	public static void InitType() {
+		if (realType == null) {
+			realType = typeof(AnimatorController);
+
+			method_GetStatePath = typeof(AnimatorStateMachine).GetMethod("GetStatePath", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+		}
+	}
+
+	public static string GetStatePathWrapper(this AnimatorStateMachine stateMachine, AnimatorState state) {
+		InitType();
+		object val = method_GetStatePath.Invoke(stateMachine, new object[] { state });
+		return (string)val;
+	}
+}
+
+public static class AnimatorStateExtension {
+
+	public static int GetFullPathHash(this AnimatorState state, AnimatorStateMachine parentSM)
+	{
+		string fullpath = parentSM.GetStatePathWrapper(state);
+		return Animator.StringToHash(fullpath);
+	}
+
+}
