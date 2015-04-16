@@ -1,8 +1,8 @@
 using UnityEngine;
 using UnityEditor;
-//using UnityEditorInternal;
 using UnityEditor.Animations;
 using System.Collections;
+using System.Collections.Generic;
 using System;
 using System.Reflection;
 
@@ -258,145 +258,6 @@ public static class AnimatorExtension {
 	}
 }
 
-public class ReorderableListWrapper {
-	private static Type realType;
-	private static ConstructorInfo method_ctor;
-	
-	private static FieldInfo field_drawElementCallback;
-	private static FieldInfo field_drawHeaderCallback;
-	private static FieldInfo field_onAddCallback;
-	private static FieldInfo field_onAddDropdownCallback;
-	private static FieldInfo field_onRemoveCallback;
-	private static FieldInfo field_onReorderCallback;
-	private static FieldInfo field_onSelectCallback;
-	
-	private static FieldInfo field_elementHeight;
-	private static FieldInfo field_footerHeight;
-	private static FieldInfo field_headerHeight;
-	
-	private static PropertyInfo property_count;
-	
-	private static MethodInfo method_DoLayoutList;
-	
-	
-	private object instance;
-	
-	public delegate void AddCallbackDelegate(object list);
-	public delegate void AddDropdownCallbackDelegate(Rect buttonRect, object list);
-	public delegate void ElementCallbackDelegate(Rect rect, int index, bool isActive, bool isFocused);
-	public delegate void HeaderCallbackDelegate(Rect rect);
-	public delegate void RemoveCallbackDelegate(object list);
-	public delegate void ReorderCallbackDelegate(object list);
-	public delegate void SelectCallbackDelegate(object list);
-	
-	public ReorderableListWrapper(object instance) {
-		InitType();
-		
-		this.instance = instance;
-	}
-	
-	public ReorderableListWrapper(IList elements, Type elementType) {
-		InitType();
-		
-		instance = method_ctor.Invoke(new object[] {elements, elementType});
-	}
-	
-	public static void InitType() {
-		if (realType == null) {
-			Assembly assembly = Assembly.GetAssembly(typeof(Editor));
-			realType = assembly.GetType("UnityEditorInternal.ReorderableList");
-			
-			method_ctor = realType.GetConstructor(new Type[] { typeof(IList), typeof(Type)});
-			
-			field_drawElementCallback = realType.GetField("drawElementCallback");
-			field_drawHeaderCallback = realType.GetField("drawHeaderCallback");
-			field_onAddCallback = realType.GetField("onAddCallback");
-			field_onAddDropdownCallback = realType.GetField("onAddDropdownCallback");
-			field_onRemoveCallback = realType.GetField("onRemoveCallback");
-			field_onReorderCallback = realType.GetField("onReorderCallback");
-			field_onSelectCallback = realType.GetField("onSelectCallback");
-			
-			field_elementHeight = realType.GetField("elementHeight");
-			field_footerHeight = realType.GetField("footerHeight");
-			field_headerHeight = realType.GetField("headerHeight");
-			
-			property_count = realType.GetProperty("count");
-			
-			method_DoLayoutList = realType.GetMethod("DoLayoutList");
-		}
-	}
-	
-	public ElementCallbackDelegate drawElementCallback {
-		set {
-			field_drawElementCallback.SetValue(instance, Delegate.CreateDelegate(field_drawElementCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public HeaderCallbackDelegate drawHeaderCallback {
-		set {
-			field_drawHeaderCallback.SetValue(instance, Delegate.CreateDelegate(field_drawHeaderCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public AddCallbackDelegate onAddCallback {
-		set {
-			field_onAddCallback.SetValue(instance, Delegate.CreateDelegate(field_onAddCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public AddDropdownCallbackDelegate onAddDropdownCallback {
-		set {
-			field_onAddDropdownCallback.SetValue(instance, Delegate.CreateDelegate(field_onAddDropdownCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public RemoveCallbackDelegate onRemoveCallback {
-		set {
-			field_onRemoveCallback.SetValue(instance, Delegate.CreateDelegate(field_onRemoveCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public ReorderCallbackDelegate onReorderCallback {
-		set {
-			field_onReorderCallback.SetValue(instance, Delegate.CreateDelegate(field_onReorderCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public SelectCallbackDelegate onSelectCallback {
-		set {
-			field_onSelectCallback.SetValue(instance, Delegate.CreateDelegate(field_onSelectCallback.FieldType, value.Target, value.Method));
-		}
-	}
-	
-	public float elementHeight {
-		get {
-			return (float)field_elementHeight.GetValue(instance);
-		}
-	}
-	
-	public float footerHeight {
-		get {
-			return (float)field_footerHeight.GetValue(instance);
-		}
-	}
-	
-	public float headerHeight {
-		get {
-			return (float)field_headerHeight.GetValue(instance);
-		}
-	}
-	
-	public int count {
-		get {
-			return (int)property_count.GetValue(instance, null);
-		}
-	}
-	
-	public void DoLayoutList() {
-		method_DoLayoutList.Invoke(instance, null);
-	}
-}
-
 public static class BlendTreeExtension {
 	
 	public static int GetRecursiveBlendParamCount(this BlendTree bt) {
@@ -459,32 +320,47 @@ public static class AnimatorControllerExtension {
 	}
 }
 
-public static class AnimatorStateMachineExtension {
-
-	private static Type realType;
-	private static MethodInfo method_GetStatePath;
-
-	public static void InitType() {
-		if (realType == null) {
-			realType = typeof(AnimatorController);
-
-			method_GetStatePath = typeof(AnimatorStateMachine).GetMethod("GetStatePath", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-		}
-	}
-
-	public static string GetStatePathWrapper(this AnimatorStateMachine stateMachine, AnimatorState state) {
-		InitType();
-		object val = method_GetStatePath.Invoke(stateMachine, new object[] { state });
-		return (string)val;
-	}
-}
-
 public static class AnimatorStateExtension {
 
 	public static int GetFullPathHash(this AnimatorState state, AnimatorStateMachine parentSM)
 	{
-		string fullpath = parentSM.GetStatePathWrapper(state);
-		return Animator.StringToHash(fullpath);
+		List<string> pathElems = new List<string>();
+
+		if (GetFullPathRecursively(parentSM, state, pathElems))
+		{
+			string fullPath = string.Join(".", pathElems.ToArray());
+			return Animator.StringToHash(fullPath);
+		}
+		else
+		{
+			Debug.LogError("Do not find state path");
+			return -1;
+		}
+	}
+
+	private static bool GetFullPathRecursively(AnimatorStateMachine parentSM, AnimatorState state, List<string> pathElems)
+	{
+		for (int i = 0 ;i < parentSM.states.Length; i++)
+		{
+			if (parentSM.states[i].state == state)
+			{
+				pathElems.Add(parentSM.name);
+				pathElems.Add(state.name);
+
+				return true;
+			}
+		}
+
+		for (int i = 0; i < parentSM.stateMachines.Length; i++)
+		{
+			if (GetFullPathRecursively(parentSM.stateMachines[i].stateMachine, state, pathElems))
+			{
+				pathElems.Insert(0, parentSM.name);
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 }

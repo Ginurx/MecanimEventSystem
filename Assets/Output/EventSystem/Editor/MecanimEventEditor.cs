@@ -207,7 +207,15 @@ public class MecanimEventEditor : EditorWindow {
 			selectedLayer = GUILayout.SelectionGrid(selectedLayer, layerNames, 1);
 			
 			if (selectedLayer >= 0 && selectedLayer < layerCount) {
-				targetStateMachine = layers[selectedLayer].stateMachine;
+
+				if (layers[selectedLayer].syncedLayerIndex != -1)
+				{
+					targetStateMachine = layers[layers[selectedLayer].syncedLayerIndex].stateMachine;
+				}
+				else
+				{
+					targetStateMachine = layers[selectedLayer].stateMachine;
+				}
 			}
 			else {
 				targetStateMachine = null;
@@ -734,11 +742,5 @@ public class MecanimEventEditor : EditorWindow {
 		}
 
 		return list;
-	}
-
-	private int GetStateFullPathHash(AnimatorController controller, int layer, AnimatorState state)
-	{
-		string fullpath = controller.layers[layer].stateMachine.GetStatePathWrapper(state);
-		return Animator.StringToHash(fullpath);
 	}
 }

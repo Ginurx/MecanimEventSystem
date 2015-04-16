@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
-using UnityEditorInternal;
+//using UnityEditorInternal;
 using System.Collections.Generic;
 
 [CustomEditor(typeof(MecanimEventEmitterWithData))]

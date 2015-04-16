@@ -485,8 +485,16 @@ public class MecanimEventInspector : Editor {
 			return false;
 		
 		AnimatorController controller = EditorUtility.InstanceIDToObject(controllerId) as AnimatorController;
-		AnimatorStateMachine sm = controller.layers[layer].stateMachine;
-		
+		AnimatorStateMachine sm;
+		if (controller.layers[layer].syncedLayerIndex != -1)
+		{
+			sm = controller.layers[controller.layers[layer].syncedLayerIndex].stateMachine;
+		}
+		else
+		{
+			sm = controller.layers[layer].stateMachine;
+		}
+
 		return FindStateRecursively(sm, stateNameHash);
 	}
 	

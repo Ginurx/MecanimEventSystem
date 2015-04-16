@@ -6,7 +6,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 	private static MecanimEventEditorPopup actived;
 	
 	private MecanimEvent eventTemp;
-	private ReorderableListWrapper conditionList;
+	private UnityEditorInternal.ReorderableList conditionList;
 	private MecanimEvent eventEditing;
 	private MecanimEventEditor editor;
 	private KeyValuePair<string, EventConditionParamTypes>[] availableParameters;
@@ -20,9 +20,9 @@ public class MecanimEventEditorPopup : EditorWindow {
 		actived.eventTemp = new MecanimEvent(e);
 		actived.editor = editor;
 		actived.availableParameters = availableParameters;
-		actived.conditionList = new ReorderableListWrapper(actived.eventTemp.condition.conditions, typeof(EventConditionEntry));
-		actived.conditionList.drawElementCallback = new ReorderableListWrapper.ElementCallbackDelegate(actived.DrawConditionsElement);
-		actived.conditionList.drawHeaderCallback = new ReorderableListWrapper.HeaderCallbackDelegate(actived.DrawConditionsHeader);
+		actived.conditionList = new UnityEditorInternal.ReorderableList(actived.eventTemp.condition.conditions, typeof(EventConditionEntry));
+		actived.conditionList.drawElementCallback = new UnityEditorInternal.ReorderableList.ElementCallbackDelegate(actived.DrawConditionsElement);
+		actived.conditionList.drawHeaderCallback = new UnityEditorInternal.ReorderableList.HeaderCallbackDelegate(actived.DrawConditionsHeader);
 		return actived;
 	}
 	
