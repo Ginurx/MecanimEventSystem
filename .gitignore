@@ -162,3 +162,6 @@ pip-log.txt
 .DS_Store
 /Library
 /Temp
+
+# Unity
+AssetStoreTools*
