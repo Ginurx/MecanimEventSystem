@@ -495,7 +495,7 @@ public class MecanimEventInspector : Editor {
 			sm = controller.layers[layer].stateMachine;
 		}
 
-		return FindStateRecursively(sm, stateNameHash);
+		return FindState(sm, stateNameHash);
 	}
 	
 		
@@ -519,18 +519,22 @@ public class MecanimEventInspector : Editor {
 		else
 			return false;
 	}
+
+	private bool FindState(AnimatorStateMachine baseSm, int namehash) {
+		return FindStateRecursively(baseSm, baseSm, namehash);
+	}
 	
-	private bool FindStateRecursively(AnimatorStateMachine stateMachine, int nameHash) {
+	private bool FindStateRecursively(AnimatorStateMachine baseSm, AnimatorStateMachine stateMachine, int nameHash) {
 
 		foreach (ChildAnimatorState childState in stateMachine.states) {
-			if (childState.state.GetFullPathHash(stateMachine) == nameHash)
+			if (childState.state.GetFullPathHash(baseSm) == nameHash)
 			{
 				return true;
 			}
 		}
 
 		foreach (ChildAnimatorStateMachine childStateMachine in stateMachine.stateMachines) {
-			if (FindStateRecursively(childStateMachine.stateMachine, nameHash))
+			if (FindStateRecursively(baseSm, childStateMachine.stateMachine, nameHash))
 				return true;
 		}
 
