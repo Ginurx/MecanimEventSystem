@@ -534,7 +534,7 @@ public class MecanimEventEditor : EditorWindow {
 		
 		Rect rect = GUILayoutUtility.GetRect(500, 10000, 50, 50);
 		
-		int timelineId = GUIUtility.GetControlID(timelineHash, FocusType.Native, rect);
+		int timelineId = GUIUtility.GetControlID(timelineHash, FocusType.Passive, rect);
 		
 		Rect thumbRect = new Rect(rect.x + rect.width * time - 5, rect.y + 2, 10, 10);
 		

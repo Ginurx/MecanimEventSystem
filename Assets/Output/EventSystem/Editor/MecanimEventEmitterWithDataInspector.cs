@@ -20,7 +20,7 @@ public class MecanimEventEmitterWithDataInspector : Editor {
 	
 	public override void OnInspectorGUI ()
 	{
-		serializedObject.UpdateIfDirtyOrScript();
+		serializedObject.UpdateIfRequiredOrScript();
 		
 		EditorGUILayout.PropertyField(animator);
 		

@@ -16,6 +16,7 @@ public class AvatarPreviewWrapper {
 	private static PropertyInfo property_OnAvatarChangeFunc;
 	private static PropertyInfo property_IKOnFeet;
 	private static PropertyInfo property_Animator;
+	private static PropertyInfo property_PreviewObject;
 	private static MethodInfo method_DoPreviewSettings;
 	private static MethodInfo method_OnDestroy;
 	private static MethodInfo method_DoAvatarPreview;
@@ -34,6 +35,7 @@ public class AvatarPreviewWrapper {
 			property_OnAvatarChangeFunc 	= realType.GetProperty("OnAvatarChangeFunc");
 			property_IKOnFeet				= realType.GetProperty("IKOnFeet");
 			property_Animator				= realType.GetProperty("Animator");
+			property_PreviewObject 			= realType.GetProperty("PreviewObject");
 			method_DoPreviewSettings		= realType.GetMethod("DoPreviewSettings");
 			method_OnDestroy				= realType.GetMethod("OnDestroy");
 			method_DoAvatarPreview			= realType.GetMethod("DoAvatarPreview", new Type[] {typeof(Rect), typeof(GUIStyle)});
@@ -73,6 +75,12 @@ public class AvatarPreviewWrapper {
 	public OnAvatarChange OnAvatarChangeFunc {
 		set {
 			property_OnAvatarChangeFunc.SetValue(instance, Delegate.CreateDelegate(property_OnAvatarChangeFunc.PropertyType, value.Target, value.Method), null);
+		}
+	}
+
+	public GameObject PreviewObject {
+		get {
+			return property_PreviewObject.GetValue(instance, null) as GameObject;
 		}
 	}
 	
@@ -287,6 +295,7 @@ public static class AnimatorControllerExtension {
 	private static Type realType;
 	private static MethodInfo method_GetEffectiveAnimatorController;
 	private static FieldInfo field_OnAnimatorControllerDirty;
+	private static PropertyInfo property_pushUndo;
 
 	public static void InitType() {
 		if (realType == null) {
@@ -294,7 +303,13 @@ public static class AnimatorControllerExtension {
 
 			method_GetEffectiveAnimatorController = realType.GetMethod("GetEffectiveAnimatorController", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
 			field_OnAnimatorControllerDirty = realType.GetField("OnAnimatorControllerDirty", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+			property_pushUndo = realType.GetProperty("pushUndo", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 		}
+	}
+
+	public static void SetPushUndo(this AnimatorController controller, bool val) {
+		InitType();
+		property_pushUndo.SetValue(controller, val, null);
 	}
 
 	public static AnimatorController GetEffectiveAnimatorController(Animator animator) {
@@ -321,6 +336,21 @@ public static class AnimatorControllerExtension {
 }
 
 public static class AnimatorStateExtension {
+	
+	private static Type realType;
+	private static PropertyInfo property_pushUndo;
+
+	public static void InitType() {
+		if (realType == null) 
+			realType = typeof(AnimatorState);
+
+		property_pushUndo = realType.GetProperty("pushUndo", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+	}
+
+	public static void SetPushUndo(this AnimatorState controller, bool val) {
+		InitType();
+		property_pushUndo.SetValue(controller, val, null);
+	}
 
 	public static int GetFullPathHash(this AnimatorState state, AnimatorStateMachine parentSM)
 	{
@@ -362,5 +392,22 @@ public static class AnimatorStateExtension {
 
 		return false;
 	}
+}
 
+public static class AnimatorStateMachineExtension {
+
+	private static Type realType;
+	private static PropertyInfo property_pushUndo;
+
+	public static void InitType() {
+		if (realType == null) 
+			realType = typeof(AnimatorStateMachine);
+		
+		property_pushUndo = realType.GetProperty("pushUndo", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+	}
+
+	public static void SetPushUndo(this AnimatorStateMachine controller, bool val) {
+		InitType();
+		property_pushUndo.SetValue(controller, val, null);
+	}
 }

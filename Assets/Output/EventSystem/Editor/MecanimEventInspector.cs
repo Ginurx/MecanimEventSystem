@@ -159,7 +159,7 @@ public class MecanimEventInspector : Editor {
 	public void SetPreviewMotion(Motion motion) {
 		if (previewedMotion == motion)
 			return;
-		
+
 		previewedMotion = motion;
 		
 		ClearStateMachine();
@@ -202,22 +202,19 @@ public class MecanimEventInspector : Editor {
 		avatarPreview.timeControl.playing = false;
 	}
 	
-	public override bool HasPreviewGUI ()
-	{
+	public override bool HasPreviewGUI () {
 		return true;
 	}
 	
-	public override void OnPreviewSettings ()
-	{
+	public override void OnPreviewSettings () {
 		if (avatarPreview != null)
 			avatarPreview.DoPreviewSettings();
 	}
 	
-	public override void OnInteractivePreviewGUI(Rect r, GUIStyle background)
-	{
+	public override void OnInteractivePreviewGUI(Rect r, GUIStyle background) {
 		if (avatarPreview == null || previewedMotion == null)
 			return;
-
+		
 		UpdateAvatarState();
 		avatarPreview.DoAvatarPreview(r, background);
 	}
@@ -240,8 +237,7 @@ public class MecanimEventInspector : Editor {
 		}
 	}
 	
-	private void OnPreviewAvatarChanged()
-	{
+	private void OnPreviewAvatarChanged() {
 		ResetStateMachine();
 	}
 	
@@ -249,19 +245,22 @@ public class MecanimEventInspector : Editor {
 		if (avatarPreview == null || avatarPreview.Animator == null)
 			return;
 		
-		if (controller == null)
-		{
+		if (controller == null) {
 			controller = new AnimatorController();
-			controller.hideFlags = HideFlags.DontSave;
+			//controller.hideFlags = HideFlags.DontSave;
+			controller.SetPushUndo(false);
 			controller.AddLayer("preview");
 			stateMachine = controller.layers[0].stateMachine;
+			stateMachine.SetPushUndo(false);
 
 			CreateParameters();
 			state = stateMachine.AddState("preview");
+			state.SetPushUndo(false);
 			state.motion = previewedMotion;
 			state.iKOnFeet = this.avatarPreview.IKOnFeet;
-			state.hideFlags = HideFlags.DontSave;
-			stateMachine.hideFlags = HideFlags.DontSave;
+			state.hideFlags = HideFlags.HideAndDontSave;
+			controller.hideFlags = HideFlags.HideAndDontSave;
+			stateMachine.hideFlags = HideFlags.HideAndDontSave;
 
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, controller);
 
@@ -270,34 +269,29 @@ public class MecanimEventInspector : Editor {
 			controllerIsDitry = false;
 		}
 		
-		if (AnimatorControllerExtension.GetEffectiveAnimatorController(avatarPreview.Animator) != this.controller)
-		{
+		if (AnimatorControllerExtension.GetEffectiveAnimatorController(avatarPreview.Animator) != this.controller) {
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, this.controller);
 		}
+
+		avatarPreview.timeControl.normalizedTime = 0;
 	}
 	
-	private void CreateParameters()
-	{
-		if (previewedMotion is BlendTree)
-		{
+	private void CreateParameters() {
+		if (previewedMotion is BlendTree) {
 			BlendTree blendTree = previewedMotion as BlendTree;
 			
-			for (int j = 0; j < blendTree.GetRecursiveBlendParamCount(); j++)
-			{
+			for (int j = 0; j < blendTree.GetRecursiveBlendParamCount(); j++) {
 				controller.AddParameter(blendTree.GetRecursiveBlendParam(j), AnimatorControllerParameterType.Float);
 			}
 		}
 	}
 	
-	private void ClearStateMachine()
-	{
-		if (avatarPreview != null && avatarPreview.Animator != null)
-		{
+	private void ClearStateMachine() {
+		if (avatarPreview != null && avatarPreview.Animator != null) {
 			AnimatorController.SetAnimatorController(avatarPreview.Animator, null);
 		}
 
-		if (this.controller != null)
-		{
+		if (this.controller != null) {
 			controller.RemoveOnAnimatorControllerDirtyCallback(this.ControllerDitry);
 		}
 
@@ -309,35 +303,34 @@ public class MecanimEventInspector : Editor {
 		state = null;
 	}
 	
-	public void ResetStateMachine()
-	{
+	public void ResetStateMachine() {
 		ClearStateMachine();
 		CreateStateMachine();
 	}
 
-	private void ControllerDitry()
-	{
+	private void ControllerDitry() {
 		this.controllerIsDitry = true;
 	}
 	
-	private void UpdateAvatarState()
-	{
+	private void UpdateAvatarState() {
 		if (Event.current.type != EventType.Repaint)
-		{
 			return;
-		}
-		
-		Animator animator = avatarPreview.Animator;
-		if (animator)
-		{
-			if (controllerIsDitry)
-			{
-				avatarPreview.ResetPreviewInstance();
+
+		if (avatarPreview.PreviewObject == null || controllerIsDitry) {
+			
+			avatarPreview.ResetPreviewInstance();
+
+			if (avatarPreview.PreviewObject != null) {
 				ResetStateMachine();
 			}
+		}
+			
+		Animator animator = avatarPreview.Animator;
 
-			if (PrevIKOnFeet != avatarPreview.IKOnFeet)
-			{
+		if (animator != null) {
+			
+			if (PrevIKOnFeet != avatarPreview.IKOnFeet) {
+				
 				PrevIKOnFeet = avatarPreview.IKOnFeet;
 				Vector3 rootPosition = avatarPreview.Animator.rootPosition;
 				Quaternion rootRotation = avatarPreview.Animator.rootRotation;
@@ -348,34 +341,34 @@ public class MecanimEventInspector : Editor {
 				avatarPreview.Animator.rootRotation = rootRotation;
 			}
 
-//			if (avatarPreview.Animator != null)
-//			{
-//				BlendTree blendTree = previewedMotion as BlendTree;
-//
-//				if (blendTree != null)
-//				{
-//					for (int i = 0; i < blendTree.GetRecursiveBlendParamCount(); i++)
-//					{
-//						string recurvieBlendParameter = blendTree.GetRecursiveBlendParam(i);
-//						float inputBlendValue = blendTree.GetInputBlendVal(recurvieBlendParameter);
-//						avatarPreview.Animator.SetFloat(recurvieBlendParameter, inputBlendValue);
-//					}
-//				}
-//			}
+			if (avatarPreview.Animator != null) {
+				
+				BlendTree blendTree = previewedMotion as BlendTree;
+
+				if (blendTree != null) {
+					
+					for (int i = 0; i < blendTree.GetRecursiveBlendParamCount(); i++) {
+						
+						string recurvieBlendParameter = blendTree.GetRecursiveBlendParam(i);
+						float inputBlendValue = blendTree.GetInputBlendVal(recurvieBlendParameter);
+						avatarPreview.Animator.SetFloat(recurvieBlendParameter, inputBlendValue);
+					}
+				}
+			}
 
 			avatarPreview.timeControl.loop = true;
 
-			float num = 1f;
-			float num2 = 0f;
+			float length = 1f;
+			float currentTime = 0f;
 			if (animator.layerCount > 0)
 			{
 				AnimatorStateInfo currentAnimatorStateInfo = animator.GetCurrentAnimatorStateInfo(0);
-				num = currentAnimatorStateInfo.length;
-				num2 = currentAnimatorStateInfo.normalizedTime;
+				length = currentAnimatorStateInfo.length;
+				currentTime = currentAnimatorStateInfo.normalizedTime;
 			}
 			
 			avatarPreview.timeControl.startTime = 0f;
-			avatarPreview.timeControl.stopTime = num;
+			avatarPreview.timeControl.stopTime = length;
 			avatarPreview.timeControl.Update();
 			
 			float num3 = this.avatarPreview.timeControl.deltaTime;
@@ -384,15 +377,15 @@ public class MecanimEventInspector : Editor {
 
 			if (!previewedMotion.isLooping)
 			{
-				if (num2 >= 1f)
+				if (currentTime >= 1f)
 				{
-					num3 -= num;
+					num3 -= length;
 				}
 				else
 				{
-					if (num2 < 0f)
+					if (currentTime < 0f)
 					{
-						num3 += num;
+						num3 += length;
 					}
 				}
 			}
@@ -401,7 +394,8 @@ public class MecanimEventInspector : Editor {
 		}
 	}
 	
-	private void LoadData() {
+	private void LoadData() 
+	{
 		
 		MecanimEventData dataSource = target as MecanimEventData;
 		
@@ -435,7 +429,6 @@ public class MecanimEventInspector : Editor {
 			}
 			
 			data[animatorController][entry.layer][entry.stateNameHash] = events;
-			
 		}
 	}
 	

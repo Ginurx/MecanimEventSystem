@@ -143,7 +143,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 	
 	private void DrawConditionsElement(Rect rect, int index, bool selected, bool focused) {
 		EventConditionEntry conditionAtIndex = eventTemp.condition.conditions[index];
-		EditorGUIUtility.LookLikeControls();
+		//EditorGUIUtility.LookLikeControls();
 		Rect paramRect = new Rect(rect.x, rect.y, rect.width/3, rect.height);
 		
 		string[] paramPopup = new string[availableParameters.Length];
@@ -200,7 +200,7 @@ public class MecanimEventEditorPopup : EditorWindow {
 	
 	private void DrawConditionsHeader(Rect headerRect)
 	{
-		EditorGUIUtility.LookLikeControls();
+		//EditorGUIUtility.LookLikeControls();
 		GUI.Label(headerRect, new GUIContent("Conditions"));
 	}
 }

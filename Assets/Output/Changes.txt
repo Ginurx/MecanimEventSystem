@@ -1,3 +1,6 @@
+Ver 2.6.9
+*Unity2017.2 compatible
+
 Ver 2.6.8
 *Unity5 compatible
 
